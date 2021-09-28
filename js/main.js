@@ -2,6 +2,7 @@ import * as THREE from '../js/build/three.module.js';
 import { BoxLineGeometry } from './modules/jsm/geometries/BoxLineGeometry.js';
 import { VRButton } from './modules/jsm/webxr/VRButton.js';
 import { XRControllerModelFactory } from './modules/jsm/webxr/XRControllerModelFactory.js';
+import {Stroke} from './stroke.js'
 
 let camera, scene, renderer;
 let controller1, controller2;
@@ -12,13 +13,13 @@ const MAX_POINTS = 2000;
 let indexCount = 0;
 let drawCount = 0;
 let line;
+let lines = [];
 
 //eventListeners
 window.addEventListener( 'resize', onWindowResize );
 
 init();
 animate();
-
 
 function init(){
     scene = new THREE.Scene();
@@ -41,15 +42,6 @@ function init(){
     document.body.appendChild( VRButton.createButton( renderer ) );
     
     setupControllers();
-
-    var lineGeometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(MAX_POINTS*3); 
-    lineGeometry.setAttribute('position', new THREE.BufferAttribute( positions, 3 ) );
-    lineGeometry.setDrawRange(0, drawCount);
-
-    const lineMaterial = new THREE.LineBasicMaterial( { color: 0xFF0000, linewidth: 2} );
-    line = new THREE.Line( lineGeometry, lineMaterial );
-    scene.add(line);
 }
 
 function animate(){
@@ -63,62 +55,58 @@ function render() {
 }
 
 function handleController( controller ) {
-
-    const userData = controller.userData;
-
     if(controller.userData.isSelecting){
-        const pos =  line.geometry.attributes.position.array;
-        pos[indexCount++] = controller.position.x;
-        pos[indexCount++] = controller.position.y;
-        pos[indexCount++] = controller.position.z;
-        drawCount++;
-        line.geometry.setDrawRange(0,drawCount);
-        line.geometry.attributes.position.needsUpdate = true; 
-        line.geometry.computeBoundingBox();
-        line.geometry.computeBoundingSphere();
+        if(lines.length > 0){
+            lines[lines.length-1].update(controller.position);
+        }
     }
 }
 
 function setupControllers(){
     controller1 = renderer.xr.getController( 0 );
-    controller1.addEventListener( 'selectstart', onSelectStart );
-    controller1.addEventListener( 'selectend', onSelectEnd );
-    controller1.addEventListener( 'connected', function ( event ) {
-        this.add( buildController( event.data ) );
+    controller1.addEventListener('selectstart', onSelectStart);
+    controller1.addEventListener('selectend', onSelectEnd);
+    controller1.addEventListener('connected', function(event){
+        this.add(buildController(event.data));
+    });
+    controller1.addEventListener('disconnected', function(){
+        this.remove(this.children[0]);
     } );
-    controller1.addEventListener( 'disconnected', function () {
-        this.remove( this.children[ 0 ] );
-    } );
-    scene.add( controller1 );
+    controller1.userData.isSelecting = false;
+    // scene.add(controller1);
 
-    controller2 = renderer.xr.getController( 1 );
-    controller2.addEventListener( 'selectstart', onSelectStart );
-    controller2.addEventListener( 'selectend', onSelectEnd );
-    controller2.addEventListener( 'connected', function ( event ) {
-        this.add( buildController( event.data ) );
-    } );
-    controller2.addEventListener( 'disconnected', function () {
-        this.remove( this.children[ 0 ] );
-    } );
-    scene.add( controller2 );
+    controller2 = renderer.xr.getController(1);
+    controller2.addEventListener('selectstart', onSelectStart);
+    controller2.addEventListener('selectend', onSelectEnd);
+    controller2.addEventListener('connected', function(event){
+        this.add(buildController(event.data));
+    });
+    controller2.addEventListener('disconnected', function(){
+        this.remove(this.children[0]);
+    });
+    controller2.userData.isSelecting = false;
+    // scene.add(controller2);
 
     const controllerModelFactory = new XRControllerModelFactory();
 
-    controllerGrip1 = renderer.xr.getControllerGrip( 0 );
-    controllerGrip1.add( controllerModelFactory.createControllerModel( controllerGrip1 ) );
-    scene.add( controllerGrip1 );
+    controllerGrip1 = renderer.xr.getControllerGrip(0);
+    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+    scene.add(controllerGrip1);
 
-    controllerGrip2 = renderer.xr.getControllerGrip( 1 );
-    controllerGrip2.add( controllerModelFactory.createControllerModel( controllerGrip2 ) );
-    scene.add( controllerGrip2 );
+    controllerGrip2 = renderer.xr.getControllerGrip(1);
+    controllerGrip2.add( controllerModelFactory.createControllerModel(controllerGrip2));
+    scene.add(controllerGrip2);
 
     function onSelectStart() {
+        if(this.userData.isSelecting == false){
+            let l = new Stroke();
+            scene.add(l.shape);
+            lines.push(l);
+        }
         this.userData.isSelecting = true;
-        console.log('start');
     }
     function onSelectEnd() {
         this.userData.isSelecting = false;
-        console.log('end');
     }
 }
 
