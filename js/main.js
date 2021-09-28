@@ -7,14 +7,11 @@ let camera, scene, renderer;
 let controller1, controller2;
 let controllerGrip1, controllerGrip2;
 
-const MAX_POINTS = 400;
+const MAX_POINTS = 2000;
 
-
-let drawCount = 3;
+let indexCount = 0;
+let drawCount = 0;
 let line;
-
-
-
 
 //eventListeners
 window.addEventListener( 'resize', onWindowResize );
@@ -45,35 +42,10 @@ function init(){
     
     setupControllers();
 
-
     var lineGeometry = new THREE.BufferGeometry();
-    const positions2 = new Float32Array( 
-        0.5, 1.5, -1,
-        -0.5, 1.5, -1.6,
-        -0.5, 1.5, -2,
-    ); 
-
-    const positions = [];
-    positions.push(0.5, 1.5, -1);
-    positions.push(-0.5, 1.5, -1.6);
-    positions.push(-0.5, 1.5, -2);
-
-    console.log(positions2);
-    console.log(positions);
-    
-    lineGeometry.setAttribute('position', new THREE.Float32BufferAttribute( positions, 3 ) );
+    const positions = new Float32Array(MAX_POINTS*3); 
+    lineGeometry.setAttribute('position', new THREE.BufferAttribute( positions, 3 ) );
     lineGeometry.setDrawRange(0, drawCount);
-    
-   
-    const points = [];
-    points.push(new THREE.Vector3( 0.5, 1.5, -1));
-    points.push(new THREE.Vector3(  -0.5, 1.5, -1.6));
-    points.push(new THREE.Vector3(  -0.5, 1.5, -2));
-    const geometry = new THREE.BufferGeometry().setFromPoints( points );
-
-    console.log(lineGeometry);
-    console.log(geometry);
-
 
     const lineMaterial = new THREE.LineBasicMaterial( { color: 0xFF0000, linewidth: 2} );
     line = new THREE.Line( lineGeometry, lineMaterial );
@@ -87,22 +59,23 @@ function animate(){
 function render() {
     handleController( controller1 );
 	handleController( controller2 );
-	// line.geometry.setDrawRange( 0, drawCount );
     renderer.render( scene, camera );
 }
 
-
 function handleController( controller ) {
+
     const userData = controller.userData;
 
     if(controller.userData.isSelecting){
-        const positions =  line.geometry.attributes.position.array;
-        positions[indexCount++] = controller.position.x;
-        positions[indexCount++] = controller.position.y;
-        positions[indexCount++] = controller.position.z;
+        const pos =  line.geometry.attributes.position.array;
+        pos[indexCount++] = controller.position.x;
+        pos[indexCount++] = controller.position.y;
+        pos[indexCount++] = controller.position.z;
         drawCount++;
         line.geometry.setDrawRange(0,drawCount);
         line.geometry.attributes.position.needsUpdate = true; 
+        line.geometry.computeBoundingBox();
+        line.geometry.computeBoundingSphere();
     }
 }
 
