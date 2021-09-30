@@ -16,23 +16,31 @@ init();
 animate();
 
 function init(){
+    let canvas = document.getElementById('canvas');
+
     scene = new THREE.Scene();
-    scene.background = new THREE.Color( 0xe8e8e8);
+    scene.background = new THREE.Color( 0xe8e8e8 );
 
     camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 10 );
-    camera.position.set( 0, 1.6, 0 );
+    camera.position.set( 0, 1.6, 3 );
 
-    scene.add( new THREE.HemisphereLight( 0x606060, 0x404040 ) );
+    scene.add( new THREE.HemisphereLight( 0x808080, 0x606060 ) );
 
     const light = new THREE.DirectionalLight( 0xffffff );
-    light.position.set( 1, 1, 1 ).normalize();
+    light.position.set( 0, 6, 0 );
+    light.castShadow = true;
     scene.add( light );
 
-    renderer = new THREE.WebGLRenderer( { antialias: true } );
+    renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true
+    });
+
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.shadowMap.enabled = true;
     renderer.xr.enabled = true;
-    document.body.appendChild( renderer.domElement );
     document.body.appendChild( VRButton.createButton( renderer ) );
 
     setupControllers();
