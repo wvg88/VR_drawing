@@ -1,0 +1,19 @@
+{
+  "name": "clean",
+  "version": "1.0.0",
+  "description": "Vr drawing app — Clean version",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://bitbucket.org/studiokrom/clean/src/master/"
+  },
+  "author": "Studio Krom",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/studiokrom/clean#readme",
+  "dependencies": {
+    "three": "^0.132.2"
+  }
+}

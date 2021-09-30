@@ -1,19 +1,13 @@
-import * as THREE from '../js/build/three.module.js';
-import { BoxLineGeometry } from './modules/jsm/geometries/BoxLineGeometry.js';
-import { VRButton } from './modules/jsm/webxr/VRButton.js';
-import { XRControllerModelFactory } from './modules/jsm/webxr/XRControllerModelFactory.js';
+import * as THREE from 'three';
+import { VRButton } from 'three/examples/jsm/webxr/VRButton';
+import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory';
 import {Stroke} from './stroke.js'
 
 let camera, scene, renderer;
 let controller1, controller2;
 let controllerGrip1, controllerGrip2;
 
-const MAX_POINTS = 2000;
-
-let indexCount = 0;
-let drawCount = 0;
-let line;
-let lines = [];
+let strokes = [];
 
 //eventListeners
 window.addEventListener( 'resize', onWindowResize );
@@ -40,7 +34,7 @@ function init(){
     renderer.xr.enabled = true;
     document.body.appendChild( renderer.domElement );
     document.body.appendChild( VRButton.createButton( renderer ) );
-    
+
     setupControllers();
 }
 
@@ -56,8 +50,8 @@ function render() {
 
 function handleController( controller ) {
     if(controller.userData.isSelecting){
-        if(lines.length > 0){
-            lines[lines.length-1].update(controller.position);
+        if(strokes.length > 0){
+            strokes[strokes.length-1].update(controller.position);
         }
     }
 }
@@ -101,7 +95,7 @@ function setupControllers(){
         if(this.userData.isSelecting == false){
             let l = new Stroke();
             scene.add(l.shape);
-            lines.push(l);
+            strokes.push(l);
         }
         this.userData.isSelecting = true;
     }
