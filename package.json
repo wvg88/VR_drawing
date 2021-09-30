@@ -2,10 +2,7 @@
   "name": "clean",
   "version": "1.0.0",
   "description": "Vr drawing app — Clean version",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "main": "js/main.js",
   "repository": {
     "type": "git",
     "url": "https://bitbucket.org/studiokrom/clean/src/master/"
