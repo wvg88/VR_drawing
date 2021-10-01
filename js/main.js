@@ -62,6 +62,14 @@ function startLine(){
     strokes.push(l);
 }
 
+function clearLines(){
+    for(let i = 0; i < strokes.length; i++){
+        console.log(strokes[i].shape);
+        scene.remove(strokes[i].shape); 
+    }
+    strokes = [];
+}
+
 function updateControllers(){
     const session = renderer.xr.getSession();
     if (session) {
@@ -69,6 +77,7 @@ function updateControllers(){
             if(source.handedness == 'right'){
                 controllers[0].buttons[0].update(source.gamepad.buttons[0].pressed);
                 controllers[0].buttons[1].update(source.gamepad.buttons[1].pressed);
+                console.log(source.gamepad.buttons[1].pressed);
                 controllers[0].buttons[2].update(source.gamepad.buttons[3].pressed);
                 controllers[0].buttons[3].update(source.gamepad.buttons[4].pressed);
                 controllers[0].buttons[4].update(source.gamepad.buttons[5].pressed);
@@ -99,7 +108,7 @@ function setupControllers(){
     controllerL.addEventListener('disconnected', function(){
         this.remove(this.children[0]);
     } );
-    controllerL.buttons = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'x'),new Button(null,'y')];
+    controllerL.buttons = [new Button(startLine, 'triggerUp'),new Button(clearLines,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'x'),new Button(null,'y')];
     controllers.push(controllerL);
 
     controllerR = renderer.xr.getController(1);
@@ -109,7 +118,7 @@ function setupControllers(){
     controllerR.addEventListener('disconnected', function(){
         this.remove(this.children[0]);
     });
-    controllerR.buttons = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'B')];
+    controllerR.buttons = [new Button(startLine, 'triggerUp'),new Button(clearLines, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'B')];
     controllers.push(controllerR);
 
     //Add controller models
