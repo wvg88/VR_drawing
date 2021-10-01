@@ -1,5 +1,5 @@
 ## VR drawing application
-This is the first version of a VR drawing application. It's still in the prototype phase. It's meant to explore the possibilities of VR inside the classroom. 
+This is the first version of a VR drawing application. It's still in the prototype phase. It's meant to explore the possibilities of VR inside the classroom.
 
 ## Installation
 ### Cloning the repository

@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory';
 import {Stroke} from './stroke.js'
+import {Button} from './button.js'
 
 let camera, scene, renderer;
-let controller1, controller2;
-let controllerGrip1, controllerGrip2;
-
+let controllerGripL, controllerGripR;
+let controllerL, controllerR;
+let controllers = [];
 let strokes = [];
 
 //eventListeners
@@ -42,7 +43,7 @@ function init(){
     renderer.shadowMap.enabled = true;
     renderer.xr.enabled = true;
     document.body.appendChild( VRButton.createButton( renderer ) );
-
+    
     setupControllers();
 }
 
@@ -51,72 +52,81 @@ function animate(){
 }
 
 function render() {
-    handleController( controller1 );
-	handleController( controller2 );
+    updateControllers();
     renderer.render( scene, camera );
 }
 
-function handleController( controller ) {
-    if(controller.userData.isSelecting){
-        if(strokes.length > 0){
-            strokes[strokes.length-1].update(controller.position);
+function startLine(){
+    let l = new Stroke();
+    scene.add(l.shape);
+    strokes.push(l);
+}
+
+function updateControllers(){
+    const session = renderer.xr.getSession();
+    if (session) {
+        for (const source of session.inputSources) {
+            if(source.handedness == 'right'){
+                controllers[0].buttons[0].update(source.gamepad.buttons[0].pressed);
+                controllers[0].buttons[1].update(source.gamepad.buttons[1].pressed);
+                controllers[0].buttons[2].update(source.gamepad.buttons[3].pressed);
+                controllers[0].buttons[3].update(source.gamepad.buttons[4].pressed);
+                controllers[0].buttons[4].update(source.gamepad.buttons[5].pressed);
+            }
+            else if(source.handedness == 'left'){
+                controllers[1].buttons[0].update(source.gamepad.buttons[0].pressed);
+                controllers[1].buttons[1].update(source.gamepad.buttons[1].pressed);
+                controllers[1].buttons[2].update(source.gamepad.buttons[3].pressed);
+                controllers[1].buttons[3].update(source.gamepad.buttons[4].pressed);
+                controllers[1].buttons[4].update(source.gamepad.buttons[5].pressed);
+            }
+        }
+    }
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].buttons[0].pressed){
+            if(strokes.length > 0){
+                strokes[strokes.length-1].update(controllers[i].position);
+            }
         }
     }
 }
 
 function setupControllers(){
-    controller1 = renderer.xr.getController( 0 );
-    controller1.addEventListener('selectstart', onSelectStart);
-    controller1.addEventListener('selectend', onSelectEnd);
-    controller1.addEventListener('connected', function(event){
+    controllerL = renderer.xr.getController(0);
+    controllerL.addEventListener('connected', function(event){
         this.add(buildController(event.data));
     });
-    controller1.addEventListener('disconnected', function(){
+    controllerL.addEventListener('disconnected', function(){
         this.remove(this.children[0]);
     } );
-    controller1.userData.isSelecting = false;
-    // scene.add(controller1);
+    controllerL.buttons = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'x'),new Button(null,'y')];
+    controllers.push(controllerL);
 
-    controller2 = renderer.xr.getController(1);
-    controller2.addEventListener('selectstart', onSelectStart);
-    controller2.addEventListener('selectend', onSelectEnd);
-    controller2.addEventListener('connected', function(event){
+    controllerR = renderer.xr.getController(1);
+    controllerR.addEventListener('connected', function(event){
         this.add(buildController(event.data));
     });
-    controller2.addEventListener('disconnected', function(){
+    controllerR.addEventListener('disconnected', function(){
         this.remove(this.children[0]);
     });
-    controller2.userData.isSelecting = false;
-    // scene.add(controller2);
+    controllerR.buttons = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'B')];
+    controllers.push(controllerR);
 
+    //Add controller models
     const controllerModelFactory = new XRControllerModelFactory();
+    controllerGripL = renderer.xr.getControllerGrip(0);
+    controllerGripL.add(controllerModelFactory.createControllerModel(controllerGripL));
+    scene.add(controllerGripL);
 
-    controllerGrip1 = renderer.xr.getControllerGrip(0);
-    controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-    scene.add(controllerGrip1);
-
-    controllerGrip2 = renderer.xr.getControllerGrip(1);
-    controllerGrip2.add( controllerModelFactory.createControllerModel(controllerGrip2));
-    scene.add(controllerGrip2);
-
-    function onSelectStart() {
-        if(this.userData.isSelecting == false){
-            let l = new Stroke();
-            scene.add(l.shape);
-            strokes.push(l);
-        }
-        this.userData.isSelecting = true;
-    }
-    function onSelectEnd() {
-        this.userData.isSelecting = false;
-    }
+    controllerGripR = renderer.xr.getControllerGrip(1);
+    controllerGripR.add( controllerModelFactory.createControllerModel(controllerGripR));
+    scene.add(controllerGripR);
 }
 
 function buildController( data ) {
     let geometry, material;
     switch ( data.targetRayMode ) {
         case 'tracked-pointer':
-            console.log('tracker');
             geometry = new THREE.BufferGeometry();
             geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, - 1 ], 3 ) );
             geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( [ 0.5, 0.5, 0.5, 0, 0, 0 ], 3 ) );
@@ -124,7 +134,6 @@ function buildController( data ) {
             return new THREE.Line( geometry, material );
 
         case 'gaze':
-            console.log('GAZE');
             geometry = new THREE.RingGeometry( 0.02, 0.04, 32 ).translate( 0, 0, - 1 );
             material = new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true } );
             return new THREE.Mesh( geometry, material );
