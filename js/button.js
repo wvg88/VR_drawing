@@ -12,7 +12,6 @@ class Button {
             if(this.pressed){
                 if(typeof this.activation === "function"){
                     this.activation();
-                    console.log('activate');
                 }
 
             }
