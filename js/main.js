@@ -14,7 +14,6 @@ let strokes = [];
 window.addEventListener( 'resize', onWindowResize );
 
 init();
-animate();
 
 function init(){
     let canvas = document.getElementById('canvas');
@@ -70,7 +69,6 @@ function addLine(points){
 
 function clearLines(){
     for(let i = 0; i < strokes.length; i++){
-        console.log(strokes[i].shape);
         scene.remove(strokes[i].shape); 
     }
     strokes = [];
@@ -150,47 +148,49 @@ function updateControllers(){
 }
 
 function setupControllers(){
+    let controller1Promise = new Promise((resolve) => {
+        controller1 = renderer.xr.getController(0);
+        controller1.addEventListener('connected', function(event){
+            this.add(buildController(event.data));
+            const session = renderer.xr.getSession();
+            if(session.inputSources[0].handedness == 'left'){
+                this.buttons = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(clearLines,'x'),new Button(null,'B')];;
+            }
+            else{
+                this.buttons = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'y')];;
+            }
+            resolve();
+        });
+        controller1.addEventListener('disconnected', function(){
+            this.remove(this.children[0]);
+        } );
+        controllers.push(controller1);
+    });
     
-    controller1 = renderer.xr.getController(0);
-    controller1.addEventListener('connected', function(event){
-        this.add(buildController(event.data));
-        const session = renderer.xr.getSession();
-        if(session.inputSources[0].handedness == 'left'){
-            this.buttons = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(clearLines,'x'),new Button(null,'B')];;
-        }
-        else{
-            this.buttons = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'y')];;
-        }
-        console.log(controllers);
+    let controller2Promise = new Promise((resolve) => {
+        controller2 = renderer.xr.getController(1);
+        controller2.addEventListener('connected', function(event){
+            this.add(buildController(event.data));
+            const session = renderer.xr.getSession();
+            if(session.inputSources[1].handedness == 'left'){
+                this.buttons = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(clearLines,'x'),new Button(null,'B')];;
+            }
+            else{
+                this.buttons = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'y')];;
+            }
+            resolve(); 
+        });
+        controller2.addEventListener('disconnected', function(){
+            this.remove(this.children[0]);
+        });
+        controllers.push(controller2);
     });
-    controller1.addEventListener('disconnected', function(){
-        this.remove(this.children[0]);
-    } );
-   
-    controllers.push(controller1);
 
-    controller2 = renderer.xr.getController(1);
-    controller2.addEventListener('connected', function(event){
-        this.add(buildController(event.data));
-        const session = renderer.xr.getSession();
-        if(session.inputSources[0].handedness == 'left'){
-            this.buttons = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(clearLines,'x'),new Button(null,'B')];;
-        }
-        else{
-            this.buttons = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'y')];;
-        }
+    Promise.all([controller1Promise, controller2Promise]).then(data =>{
+        console.log('resolving');
         console.log(controllers);
+        animate();
     });
-    controller2.addEventListener('disconnected', function(){
-        this.remove(this.children[0]);
-    });
-    // if(session.inputSources[1].handedness == 'left'){
-    //     controller2.buttons = buttonsLeft;
-    // }
-    // else{
-    //     controller2.buttons = buttonsRight;
-    // }
-    controllers.push(controller2);
 
     //Add controller models
     const controllerModelFactory = new XRControllerModelFactory();
