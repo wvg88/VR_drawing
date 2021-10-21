@@ -3,12 +3,14 @@ import { VRButton } from 'three/examples/jsm/webxr/VRButton';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory';
 import {Stroke} from './stroke.js'
 import {Button} from './button.js'
+import { Vector3 } from 'three';
 
 let camera, scene, renderer;
 let controllerGripL, controllerGripR;
 let controller1, controller2;
 let controllers = [];
 let strokes = [];
+let updateTimer = 0;
 
 //eventListeners
 window.addEventListener( 'resize', onWindowResize );
@@ -95,6 +97,7 @@ function loadDrawing(){
     request.open('get', 'php/getData.php', true);
     request.send();
     request.onload = function(){
+        clearLines();
         var data = JSON.parse(this.responseText);
         for(const d of data){
             let shapes = JSON.parse(d.shapes);
@@ -121,7 +124,11 @@ function updateControllers(){
     let controllerCount = 0;
     if (session) {
         for (const source of session.inputSources) {
-            if(controllerCount == 0){
+            if(controllerCount == 0){ 
+                if(updateTimer == 0){
+                    controllers[0].drawingSpeed.velocity = controllers[0].position.distanceTo(controllers[0].drawingSpeed.lastPoint);
+                    controllers[0].drawingSpeed.lastPoint = new THREE.Vector3(controllers[0].position.x, controllers[0].position.y,controllers[0].position.z);
+                }
                 controllers[0].buttons[0].update(source.gamepad.buttons[0].pressed);
                 controllers[0].buttons[1].update(source.gamepad.buttons[1].pressed);
                 controllers[0].buttons[2].update(source.gamepad.buttons[3].pressed);
@@ -129,6 +136,10 @@ function updateControllers(){
                 controllers[0].buttons[4].update(source.gamepad.buttons[5].pressed);
             }
             else if(controllerCount == 1){
+                if(updateTimer == 0){
+                    controllers[1].drawingSpeed.velocity = controllers[1].position.distanceTo(controllers[0].drawingSpeed.lastPoint);
+                    controllers[1].drawingSpeed.lastPoint = new THREE.Vector3(controllers[0].position.x, controllers[0].position.y,controllers[0].position.z);
+                }
                 controllers[1].buttons[0].update(source.gamepad.buttons[0].pressed);
                 controllers[1].buttons[1].update(source.gamepad.buttons[1].pressed);
                 controllers[1].buttons[2].update(source.gamepad.buttons[3].pressed);
@@ -144,6 +155,10 @@ function updateControllers(){
                 strokes[strokes.length-1].update(controllers[i].position);
             }
         }
+    }
+    updateTimer++;
+    if(updateTimer > 5){
+        updateTimer = 0;
     }
 }
 
@@ -164,6 +179,11 @@ function setupControllers(){
         controller1.addEventListener('disconnected', function(){
             this.remove(this.children[0]);
         } );
+        controller1.drawingSpeed = {
+            lastUpdate: new Date(),
+            lastPoint: new THREE.Vector3(0,0,0),
+            velocity: 0
+        }
         controllers.push(controller1);
     });
     
@@ -183,12 +203,15 @@ function setupControllers(){
         controller2.addEventListener('disconnected', function(){
             this.remove(this.children[0]);
         });
+        controller2.drawingSpeed = {
+            lastUpdate: new Date(),
+            lastPoint: new THREE.Vector3(0,0,0),
+            velocity: 0
+        }
         controllers.push(controller2);
     });
 
     Promise.all([controller1Promise, controller2Promise]).then(data =>{
-        console.log('resolving');
-        console.log(controllers);
         animate();
     });
 

@@ -13,10 +13,8 @@ class Button {
                 if(typeof this.activation === "function"){
                     this.activation();
                 }
-
             }
         }
-
     }
 }
 
