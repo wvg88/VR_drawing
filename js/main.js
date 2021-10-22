@@ -1,9 +1,9 @@
 import * as THREE from 'three';
+import { MeshLine, MeshLineMaterial } from '../js/MeshLine.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory';
 import {Stroke} from './stroke.js'
 import {Button} from './button.js'
-import { Vector3 } from 'three';
 
 let camera, scene, renderer;
 let controllerGripL, controllerGripR;
@@ -12,6 +12,9 @@ let controllers = [];
 let strokes = [];
 let updateTimer = 0;
 
+let mesh;
+let points = [];
+let drawRange = 0;
 //eventListeners
 window.addEventListener( 'resize', onWindowResize );
 
@@ -59,19 +62,19 @@ function render() {
 
 function startLine(){
     let l = new Stroke();
-    scene.add(l.shape);
+    scene.add(l.mesh);
     strokes.push(l);
 }
 
 function addLine(points){
     let l = new Stroke(points);
-    scene.add(l.shape);
+    scene.add(l.mesh);
     strokes.push(l);
 }
 
 function clearLines(){
     for(let i = 0; i < strokes.length; i++){
-        scene.remove(strokes[i].shape); 
+        scene.remove(strokes[i].mesh); 
     }
     strokes = [];
 }
@@ -81,7 +84,7 @@ function saveDrawing(){
     for(let i = 0; i < strokes.length; i++){
         let jsonObject = {
             sort: 'Line',
-            points: Array.from(strokes[i].shape.geometry.attributes.position.array.slice(0, strokes[i].indexCount))
+            points: Array.from(strokes[i].mesh.geometry.attributes.position.array.slice(0, strokes[i].indexCount))
         }
         jsonDrawing.push(jsonObject);
     }

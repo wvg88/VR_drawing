@@ -1,17 +1,16 @@
 import * as THREE from 'three';
+import { MeshLine, MeshLineMaterial } from '../js/MeshLine.js';
+
 class Stroke {
     constructor(points){
         if(points == undefined){
-            const MAX_POINTS = 4000;
-            let geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(MAX_POINTS*3); 
-            geometry.setAttribute('position', new THREE.BufferAttribute( positions, 3 ) );
+            this.positions = []; 
             this.drawCount = 0;
             this.indexCount = 0;
-            geometry.setDrawRange(0, this.drawCount);
-            this.material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 1} );
-            this.shape = new THREE.Line( geometry, this.material); 
-
+            const line  = new MeshLine();
+            line.setPoints(this.positions);
+            const material = new MeshLineMaterial();
+            this.mesh = new THREE.Mesh(line, material)
         }
         else{
             let geometry = new THREE.BufferGeometry(); 
@@ -20,19 +19,15 @@ class Stroke {
             this.indexCount = points.length;
             geometry.setDrawRange(0, this.drawCount);
             this.material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 1} );
-            this.shape = new THREE.Line( geometry, this.material); 
+            this.mesh = new THREE.Line( geometry, this.material); 
         }
     }
     update(pos){
-        const position =  this.shape.geometry.attributes.position.array;
-        position[this.indexCount++] = pos.x;
-        position[this.indexCount++] = pos.y;
-        position[this.indexCount++] = pos.z;
+        this.positions.push(pos.x);
+        this.positions.push(pos.y);
+        this.positions.push(pos.z);
         this.drawCount++;
-        this.shape.geometry.setDrawRange(0,this.drawCount);
-        this.shape.geometry.attributes.position.needsUpdate = true; 
-        this.shape.geometry.computeBoundingBox();
-        this.shape.geometry.computeBoundingSphere();
+        this.mesh.geometry.setPoints(this.positions.flat(), p => 0.04);
     }
 }
 export {Stroke};
