@@ -5,8 +5,7 @@ class Stroke {
     constructor(points){
         if(points == undefined){
             this.positions = []; 
-            this.drawCount = 0;
-            this.indexCount = 0;
+            this.lineWidths = [];
             const line  = new MeshLine();
             line.setPoints(this.positions);
             const material = new MeshLineMaterial();
@@ -22,12 +21,13 @@ class Stroke {
             this.mesh = new THREE.Line( geometry, this.material); 
         }
     }
-    update(pos){
+    update(pos, lw){
         this.positions.push(pos.x);
         this.positions.push(pos.y);
         this.positions.push(pos.z);
-        this.drawCount++;
-        this.mesh.geometry.setPoints(this.positions.flat(), p => 0.04);
+        this.lineWidths.push(lw);
+        let count = 0;
+        this.mesh.geometry.setPoints(this.positions.flat(), p => this.lineWidths[count++]);
     }
 }
 export {Stroke};

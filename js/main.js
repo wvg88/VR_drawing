@@ -129,7 +129,7 @@ function updateControllers(){
         for (const source of session.inputSources) {
             if(controllerCount == 0){ 
                 if(updateTimer == 0){
-                    controllers[0].drawingSpeed.velocity = controllers[0].position.distanceTo(controllers[0].drawingSpeed.lastPoint);
+                    controllers[0].drawingSpeed.velocity = updateLineWidth(controllers[0].drawingSpeed.velocity,controllers[0].position.distanceTo(controllers[0].drawingSpeed.lastPoint));
                     controllers[0].drawingSpeed.lastPoint = new THREE.Vector3(controllers[0].position.x, controllers[0].position.y,controllers[0].position.z);
                 }
                 controllers[0].buttons[0].update(source.gamepad.buttons[0].pressed);
@@ -140,8 +140,8 @@ function updateControllers(){
             }
             else if(controllerCount == 1){
                 if(updateTimer == 0){
-                    controllers[1].drawingSpeed.velocity = controllers[1].position.distanceTo(controllers[0].drawingSpeed.lastPoint);
-                    controllers[1].drawingSpeed.lastPoint = new THREE.Vector3(controllers[0].position.x, controllers[0].position.y,controllers[0].position.z);
+                    controllers[1].drawingSpeed.velocity = updateLineWidth(controllers[1].drawingSpeed.velocity,controllers[1].position.distanceTo(controllers[1].drawingSpeed.lastPoint));
+                    controllers[1].drawingSpeed.lastPoint = new THREE.Vector3(controllers[1].position.x, controllers[1].position.y,controllers[1].position.z);
                 }
                 controllers[1].buttons[0].update(source.gamepad.buttons[0].pressed);
                 controllers[1].buttons[1].update(source.gamepad.buttons[1].pressed);
@@ -155,7 +155,8 @@ function updateControllers(){
     for(let i = 0; i < controllers.length; i++){
         if(controllers[i].buttons[0].pressed){
             if(strokes.length > 0){
-                strokes[strokes.length-1].update(controllers[i].position);
+                console.log(controllers[i].drawingSpeed.velocity);
+                strokes[strokes.length-1].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
             }
         }
     }
@@ -163,6 +164,26 @@ function updateControllers(){
     if(updateTimer > 5){
         updateTimer = 0;
     }
+}
+
+function updateLineWidth(a, b){
+    b = b/4;
+    let thickness;
+    if(b > a){
+        thickness = a + (0.2*(b-a));
+    }
+    else{
+        thickness = a - (0.2*(a-b));
+    }
+    console.log(thickness);
+    if(thickness > 0.05){
+        thickness = 0.05;
+    }
+    else if (thickness < 0.002){
+        thickness = 0.002;
+    }
+    console.log(thickness);
+    return thickness;
 }
 
 function setupControllers(){
