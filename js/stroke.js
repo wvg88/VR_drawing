@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import { MeshLine, MeshLineMaterial } from '../js/MeshLine.js';
 
 class Stroke {
-    constructor(points){
+    constructor(points , lineWidths){
         if(points == undefined){
+            this.rule = 3;
             this.positions = []; 
             this.lineWidths = [];
             const line  = new MeshLine();
@@ -12,13 +13,14 @@ class Stroke {
             this.mesh = new THREE.Mesh(line, material)
         }
         else{
-            let geometry = new THREE.BufferGeometry(); 
-            geometry.setAttribute('position', new THREE.BufferAttribute( Float32Array.from(points), 3 ) );
-            this.drawCount = points.length/3;
-            this.indexCount = points.length;
-            geometry.setDrawRange(0, this.drawCount);
-            this.material = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 1} );
-            this.mesh = new THREE.Line( geometry, this.material); 
+            this.rule = 3;
+            this.positions = points; 
+            this.lineWidths = lineWidths;
+            const line  = new MeshLine();
+            let count = 0;
+            line.setPoints(this.positions.flat(), p => this.lineWidths[count++]);
+            const material = new MeshLineMaterial();
+            this.mesh = new THREE.Mesh(line, material)
         }
     }
     update(pos, lw){

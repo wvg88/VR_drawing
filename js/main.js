@@ -5,22 +5,23 @@ import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerM
 import {Stroke} from './stroke.js'
 import {Button} from './button.js'
 
-let camera, scene, renderer;
-let controllerGripL, controllerGripR;
-let controller1, controller2;
-let controllers = [];
-let strokes = [];
-let updateTimer = 0;
+var camera, scene, renderer;
+var controllerGripL, controllerGripR;
+var controller1, controller2;
+var controllers = [];
+var strokes = [];
+var updateTimer = 0;
+var drawings = [];
+var activeDrawing = null;
+var editRights = true;
 
-let mesh;
-let points = [];
-let drawRange = 0;
 //eventListeners
 window.addEventListener( 'resize', onWindowResize );
 
 init();
 
 function init(){
+    getDrawings();
     let canvas = document.getElementById('canvas');
 
     scene = new THREE.Scene();
@@ -66,13 +67,11 @@ function startLine(){
     strokes.push(l);
 }
 
-function addLine(points){
-    let l = new Stroke(points);
-    scene.add(l.mesh);
-    strokes.push(l);
-}
-
-function clearLines(){
+function newFile(load){
+    if(!load){
+        activeDrawing = null;
+        editRights = true;
+    }
     for(let i = 0; i < strokes.length; i++){
         scene.remove(strokes[i].mesh); 
     }
@@ -80,36 +79,106 @@ function clearLines(){
 }
 
 function saveDrawing(){
-    let jsonDrawing = [];
-    for(let i = 0; i < strokes.length; i++){
-        let jsonObject = {
-            sort: 'Line',
-            points: Array.from(strokes[i].mesh.geometry.attributes.position.array.slice(0, strokes[i].indexCount))
+    if(editRights){
+        if(activeDrawing == null){
+            let shapesCollection = [];
+            for(let i = 0; i < strokes.length; i++){
+                let shapeObject = saveShape(strokes[i]);
+                shapesCollection.push(shapeObject);
+            }
+            let jsonDrawing = {
+                shapes: shapesCollection,
+                editable: 1,
+            }
+            let xhr = new XMLHttpRequest();
+            const formData = new FormData();
+            formData.append('drawing', JSON.stringify(jsonDrawing));
+            xhr.open("POST", "php/saveData.php", true);
+            xhr.send(formData);
         }
-        jsonDrawing.push(jsonObject);
+        else{
+
+        }
+        
     }
-    let xhr = new XMLHttpRequest();
-    const formData = new FormData();
-    formData.append('drawing', JSON.stringify(jsonDrawing));
-    xhr.open("POST", "php/saveData.php", true);
-    xhr.send(formData);
 }
 
-function loadDrawing(){
-    var request = new XMLHttpRequest();
-    request.open('get', 'php/getData.php', true);
+function saveShape(obj){
+    if(obj.rule == 1){
+
+    }
+    else if(obj.rule == 2){
+        
+    }
+    else if(obj.rule == 3){
+        let shapeObject = {
+            rule: obj.rule,
+            points: obj.positions,
+            lineWidths: obj.lineWidths
+        }
+        return shapeObject;
+    }
+    else{
+        return [];
+    }
+}
+
+
+function getDrawings(){
+    let request = new XMLHttpRequest();
+    request.open('get', 'php/getDrawings.php', true);
     request.send();
     request.onload = function(){
-        clearLines();
-        var data = JSON.parse(this.responseText);
-        for(const d of data){
-            let shapes = JSON.parse(d.shapes);
-            for(const l of shapes){
-                if(l.sort == 'Line'){
-                    addLine(l.points);
-                }
+        let data = JSON.parse(this.responseText);
+        for(let i = 0; i < data.length; i++){
+            drawings.push(data[i]);
+        }
+    }
+}
+
+function loadDrawing(direction){
+    if(activeDrawing != null){
+        if(direction){
+            activeDrawing++;
+            if(activeDrawing > drawings.length -1){
+                activeDrawing = 0;
             }
         }
+        else{
+            activeDrawing--;
+            if(activeDrawing < 0){
+                activeDrawing = drawings.length -1;
+            }
+        }
+    }
+    else{
+        activeDrawing = 0;
+    }
+    let request = new XMLHttpRequest();
+    const formData = new FormData();
+    formData.append('id', drawings[activeDrawing]);
+    request.open('POST', 'php/getData.php', true);
+    request.send(formData);
+    request.onload = function(){
+        newFile(true);
+        let data = JSON.parse(this.responseText);
+        if(data.editable == 1){
+            editRights = true;
+        }
+        else{
+            editRights = false;
+        }
+        drawDrawing(JSON.parse(data['shapes']));
+    }
+}
+
+function drawDrawing(drawing){
+    for(const line of drawing){
+       if(line.rule == 3){
+            let l = new Stroke(line.points, line.lineWidths);
+            scene.add(l.mesh);
+            strokes.push(l);
+       }
     }
 }
 
@@ -117,8 +186,11 @@ document.addEventListener("keydown", function(event) {
     if(event.key == 's'){
         saveDrawing();
     }
-    if(event.key == 'o'){
-        loadDrawing();
+    if(event.key == 'n'){
+        loadDrawing(true);
+    }
+    if(event.key == 'p'){
+        loadDrawing(false);
     }
 })
 
@@ -155,7 +227,6 @@ function updateControllers(){
     for(let i = 0; i < controllers.length; i++){
         if(controllers[i].buttons[0].pressed){
             if(strokes.length > 0){
-                console.log(controllers[i].drawingSpeed.velocity);
                 strokes[strokes.length-1].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
             }
         }
@@ -175,28 +246,28 @@ function updateLineWidth(a, b){
     else{
         thickness = a - (0.2*(a-b));
     }
-    console.log(thickness);
     if(thickness > 0.05){
         thickness = 0.05;
     }
     else if (thickness < 0.002){
         thickness = 0.002;
     }
-    console.log(thickness);
     return thickness;
 }
 
 function setupControllers(){
+    let controllerSetupLeft = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(newFile,'x'),new Button(null,'y')];
+    let controllerSetupRight = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'a'),new Button(null,'b')];
     let controller1Promise = new Promise((resolve) => {
         controller1 = renderer.xr.getController(0);
         controller1.addEventListener('connected', function(event){
             this.add(buildController(event.data));
             const session = renderer.xr.getSession();
             if(session.inputSources[0].handedness == 'left'){
-                this.buttons = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(clearLines,'x'),new Button(null,'B')];;
+                this.buttons = controllerSetupLeft;
             }
             else{
-                this.buttons = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'y')];;
+                this.buttons = controllerSetupRight;
             }
             resolve();
         });
@@ -216,11 +287,11 @@ function setupControllers(){
         controller2.addEventListener('connected', function(event){
             this.add(buildController(event.data));
             const session = renderer.xr.getSession();
-            if(session.inputSources[1].handedness == 'left'){
-                this.buttons = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(clearLines,'x'),new Button(null,'B')];;
+            if(session.inputSources[0].handedness == 'left'){
+                this.buttons = controllerSetupLeft;
             }
             else{
-                this.buttons = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'A'),new Button(null,'y')];;
+                this.buttons = controllerSetupRight;
             }
             resolve(); 
         });
