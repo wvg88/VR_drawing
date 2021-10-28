@@ -8,7 +8,6 @@ class Rule03 {
             this.positions = []; 
             this.lineWidths = [];
             const line  = new MeshLine();
-            line.setPoints(this.positions);
             const material = new MeshLineMaterial();
             this.mesh = new THREE.Mesh(line, material)
         }
@@ -30,6 +29,12 @@ class Rule03 {
         this.lineWidths.push(lw);
         let count = 0;
         this.mesh.geometry.setPoints(this.positions.flat(), p => this.lineWidths[count++]);
+        if(this.positions.length > 1000){
+            return true;
+        }
+        else{
+            return false;
+        }
     }
 }
 export {Rule03};

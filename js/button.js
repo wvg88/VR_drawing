@@ -1,7 +1,7 @@
 class Button {
-    constructor(activation, sort, handedness){
+    constructor(activation, sort, parameter){
         this.activation = activation;
-        this.handedness = handedness;
+        this.parameter = parameter;
         this.pressed = false;
         this.previousState = false;
         this.sort = sort;
@@ -12,7 +12,7 @@ class Button {
         if(this.pressed != this.previousState){
             if(this.pressed){
                 if(typeof this.activation === "function"){
-                    this.activation(this.handedness);
+                    this.activation(this.parameter);
                 }
             }
         }

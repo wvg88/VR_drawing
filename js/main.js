@@ -11,7 +11,7 @@ var controller1, controller2;
 var controllers = [];
 var meshes = [];
 
-var updateTimer = 0;
+var controllUpdateTimer = 0;
 var drawings = [];
 var activeDrawing = null;
 var editRights = true;
@@ -67,10 +67,11 @@ function animate(){
 
 function render() {
     updateControllers();
+    updateMeshes();
     renderer.render( scene, camera );
 }
 
-function startMesh(handedness){
+function startMesh(handedness, continousLine){
     switch (activeRule) {
         case 0:
          
@@ -90,6 +91,9 @@ function startMesh(handedness){
     for(let i = 0; i < controllers.length; i++){
         if(controllers[i].handedness == handedness){
             controllers[i].activeMesh = meshes.length -1;
+            if(continousLine){
+                meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
+            }
         }
     }
 }
@@ -239,7 +243,7 @@ function updateControllers(){
     if (session) {
         for (const source of session.inputSources) {
             if(controllerCount == 0){
-                if(updateTimer == 0){
+                if(controllUpdateTimer == 0){
                     controllers[0].drawingSpeed.velocity = updateLineWidth(controllers[0].drawingSpeed.velocity,controllers[0].position.distanceTo(controllers[0].drawingSpeed.lastPoint));
                     controllers[0].drawingSpeed.lastPoint = new THREE.Vector3(controllers[0].position.x, controllers[0].position.y,controllers[0].position.z);
                 }
@@ -250,7 +254,7 @@ function updateControllers(){
                 controllers[0].buttons[4].update(source.gamepad.buttons[5].pressed);
             }
             else if(controllerCount == 1){
-                if(updateTimer == 0){
+                if(controllUpdateTimer == 0){
                     controllers[1].drawingSpeed.velocity = updateLineWidth(controllers[1].drawingSpeed.velocity,controllers[1].position.distanceTo(controllers[1].drawingSpeed.lastPoint));
                     controllers[1].drawingSpeed.lastPoint = new THREE.Vector3(controllers[1].position.x, controllers[1].position.y,controllers[1].position.z);
                 }
@@ -263,16 +267,19 @@ function updateControllers(){
             controllerCount++;
         }
     }
-    updateTimer++;
-    if(updateTimer > 5){
-        updateTimer = 0;
+    controllUpdateTimer++;
+    if(controllUpdateTimer > 5){
+        controllUpdateTimer = 0;
     }
+}
 
-    //updateMeshes
+function updateMeshes(){
     for(let i = 0; i < controllers.length; i++){
         if(controllers[i].buttons[0].pressed){
             if(meshes.length > 0){
-                meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
+                if(meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity)){
+                    startMesh(controllers[i].handedness, true);
+                }
             }
         }
     }
@@ -297,8 +304,8 @@ function updateLineWidth(a, b){
 }
 
 function setupControllers(p){
-    let controllerSetupLeft = [new Button(startMesh, 'triggerUp', 'left'),new Button(null, 'triggerDown', 'left'),new Button(null,'thumbstickPress', 'left'),new Button(newFile,'x','left'),new Button(null,'y','left')];
-    let controllerSetupRight = [new Button(startMesh, 'triggerUp', 'right'),new Button(null,'triggerDown', 'right'),new Button(null,'thumbstickPress', 'right'),new Button(null,'a', 'right'),new Button(null,'b','right')];
+    let controllerSetupLeft = [new Button(startMesh, 'triggerUp', 'left'),new Button(null, 'triggerDown', null),new Button(null,'thumbstickPress', null),new Button(newFile,'x',null),new Button(saveDrawing,'y',null)];
+    let controllerSetupRight = [new Button(startMesh, 'triggerUp', 'right'),new Button(null,'triggerDown', null),new Button(null,'thumbstickPress', null),new Button(loadDrawing,'a', true),new Button(loadDrawing,'b',false)];
     let controller1Promise = new Promise((resolve) => {
         controller1 = renderer.xr.getController(0);
         controller1.addEventListener('connected', function(event){
