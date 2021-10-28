@@ -2,34 +2,35 @@ import * as THREE from 'three';
 import { MeshLine, MeshLineMaterial } from '../js/MeshLine.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory';
-import {Stroke} from './stroke.js'
+import {Rule03} from './rule_03.js'
 import {Button} from './button.js'
 
 var camera, scene, renderer;
 var controllerGripL, controllerGripR;
 var controller1, controller2;
 var controllers = [];
-var strokes = [];
+var meshes = [];
+
 var updateTimer = 0;
 var drawings = [];
 var activeDrawing = null;
 var editRights = true;
+var savingInProgress = false;
 
-//eventListeners
-window.addEventListener( 'resize', onWindowResize );
+var activeRule = 0;
+const urlParams = new URLSearchParams(window.location.search);
+if(urlParams.get('rule')){
+    activeRule = parseInt(urlParams.get('rule'));
+}
 
 init();
 
 function init(){
-    getDrawings();
     let canvas = document.getElementById('canvas');
-
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x000000);
-
     camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 10 );
     camera.position.set( 0, 1.6, 3 );
-
     scene.add( new THREE.HemisphereLight( 0x808080, 0x606060 ) );
 
     const light = new THREE.DirectionalLight( 0xffffff );
@@ -49,7 +50,15 @@ function init(){
     renderer.xr.enabled = true;
     document.body.appendChild( VRButton.createButton( renderer ) );
     
-    setupControllers();
+    let setupControllersP = new Promise((resolve) => {
+        setupControllers(resolve);
+    });
+    let getDrawingsP = new Promise((resolve) => {
+        getDrawings(resolve);
+    });
+    Promise.all([setupControllersP, getDrawingsP]).then(data =>{
+        animate();
+    });
 }
 
 function animate(){
@@ -61,45 +70,85 @@ function render() {
     renderer.render( scene, camera );
 }
 
-function startLine(){
-    let l = new Stroke();
-    scene.add(l.mesh);
-    strokes.push(l);
+function startMesh(handedness){
+    switch (activeRule) {
+        case 0:
+         
+            break;
+        case 1:
+          
+            break;
+        case 2:
+           
+            break;
+        case 3:
+            let l = new Rule03();
+            scene.add(l.mesh);
+            meshes.push(l);
+            break;
+    }
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].handedness == handedness){
+            controllers[i].activeMesh = meshes.length -1;
+        }
+    }
 }
 
-function newFile(load){
-    if(!load){
-        activeDrawing = null;
-        editRights = true;
+function newFile(){
+    activeDrawing = null;
+    editRights = true;
+    clearScene();
+}
+
+function clearScene(){
+    for(let i = 0; i < meshes.length; i++){
+        scene.remove(meshes[i].mesh); 
     }
-    for(let i = 0; i < strokes.length; i++){
-        scene.remove(strokes[i].mesh); 
-    }
-    strokes = [];
+    meshes = [];
 }
 
 function saveDrawing(){
-    if(editRights){
-        if(activeDrawing == null){
+    if(!savingInProgress){
+        if(activeDrawing == null || editRights){
+            savingInProgress = true;
             let shapesCollection = [];
-            for(let i = 0; i < strokes.length; i++){
-                let shapeObject = saveShape(strokes[i]);
+            for(let i = 0; i < meshes.length; i++){
+                let shapeObject = saveShape(meshes[i]);
                 shapesCollection.push(shapeObject);
             }
             let jsonDrawing = {
                 shapes: shapesCollection,
                 editable: 1,
             }
-            let xhr = new XMLHttpRequest();
+            let request = new XMLHttpRequest();
             const formData = new FormData();
             formData.append('drawing', JSON.stringify(jsonDrawing));
-            xhr.open("POST", "php/saveData.php", true);
-            xhr.send(formData);
+            if(activeDrawing == null){
+                formData.append('id', 'new');
+            }
+            else if(editRights){
+                formData.append('id', drawings[activeDrawing]);
+            }
+            request.open("POST", "php/saveData.php", true);
+            request.send(formData);
+            request.onload = function(){
+                if(activeDrawing == null){
+                    let updateIDP = new Promise((resolve) => {
+                        getDrawings(resolve);
+                    });
+                    updateIDP.then((value) => {
+                        activeDrawing = drawings.length -1;
+                    }); 
+                }
+                savingInProgress = false;
+            }
         }
-        else{
-
+        else if(!editRights){
+            console.log('no edit rights to this drawing');
         }
-        
+    }
+    else{
+        console.log('saving in progress');
     }
 }
 
@@ -124,15 +173,17 @@ function saveShape(obj){
 }
 
 
-function getDrawings(){
+function getDrawings(p){
     let request = new XMLHttpRequest();
     request.open('get', 'php/getDrawings.php', true);
     request.send();
     request.onload = function(){
+        drawings = [];
         let data = JSON.parse(this.responseText);
         for(let i = 0; i < data.length; i++){
             drawings.push(data[i]);
         }
+        p();
     }
 }
 
@@ -160,7 +211,7 @@ function loadDrawing(direction){
     request.open('POST', 'php/getData.php', true);
     request.send(formData);
     request.onload = function(){
-        newFile(true);
+        clearScene();
         let data = JSON.parse(this.responseText);
         if(data.editable == 1){
             editRights = true;
@@ -175,31 +226,19 @@ function loadDrawing(direction){
 function drawDrawing(drawing){
     for(const line of drawing){
        if(line.rule == 3){
-            let l = new Stroke(line.points, line.lineWidths);
+            let l = new Rule03(line.points, line.lineWidths);
             scene.add(l.mesh);
-            strokes.push(l);
+            meshes.push(l);
        }
     }
 }
-
-document.addEventListener("keydown", function(event) {
-    if(event.key == 's'){
-        saveDrawing();
-    }
-    if(event.key == 'n'){
-        loadDrawing(true);
-    }
-    if(event.key == 'p'){
-        loadDrawing(false);
-    }
-})
 
 function updateControllers(){
     const session = renderer.xr.getSession();
     let controllerCount = 0;
     if (session) {
         for (const source of session.inputSources) {
-            if(controllerCount == 0){ 
+            if(controllerCount == 0){
                 if(updateTimer == 0){
                     controllers[0].drawingSpeed.velocity = updateLineWidth(controllers[0].drawingSpeed.velocity,controllers[0].position.distanceTo(controllers[0].drawingSpeed.lastPoint));
                     controllers[0].drawingSpeed.lastPoint = new THREE.Vector3(controllers[0].position.x, controllers[0].position.y,controllers[0].position.z);
@@ -224,16 +263,18 @@ function updateControllers(){
             controllerCount++;
         }
     }
-    for(let i = 0; i < controllers.length; i++){
-        if(controllers[i].buttons[0].pressed){
-            if(strokes.length > 0){
-                strokes[strokes.length-1].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
-            }
-        }
-    }
     updateTimer++;
     if(updateTimer > 5){
         updateTimer = 0;
+    }
+
+    //updateMeshes
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].buttons[0].pressed){
+            if(meshes.length > 0){
+                meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
+            }
+        }
     }
 }
 
@@ -255,27 +296,29 @@ function updateLineWidth(a, b){
     return thickness;
 }
 
-function setupControllers(){
-    let controllerSetupLeft = [new Button(startLine, 'triggerUp'),new Button(null, 'triggerDown'),new Button(null,'thumbstickPress'),new Button(newFile,'x'),new Button(null,'y')];
-    let controllerSetupRight = [new Button(startLine, 'triggerUp'),new Button(null,'triggerDown'),new Button(null,'thumbstickPress'),new Button(null,'a'),new Button(null,'b')];
+function setupControllers(p){
+    let controllerSetupLeft = [new Button(startMesh, 'triggerUp', 'left'),new Button(null, 'triggerDown', 'left'),new Button(null,'thumbstickPress', 'left'),new Button(newFile,'x','left'),new Button(null,'y','left')];
+    let controllerSetupRight = [new Button(startMesh, 'triggerUp', 'right'),new Button(null,'triggerDown', 'right'),new Button(null,'thumbstickPress', 'right'),new Button(null,'a', 'right'),new Button(null,'b','right')];
     let controller1Promise = new Promise((resolve) => {
         controller1 = renderer.xr.getController(0);
         controller1.addEventListener('connected', function(event){
             this.add(buildController(event.data));
             const session = renderer.xr.getSession();
             if(session.inputSources[0].handedness == 'left'){
+                this.handedness = 'left';
                 this.buttons = controllerSetupLeft;
             }
             else{
+                this.handedness = 'right';
                 this.buttons = controllerSetupRight;
             }
+            this.activeMesh = null;
             resolve();
         });
         controller1.addEventListener('disconnected', function(){
             this.remove(this.children[0]);
         } );
         controller1.drawingSpeed = {
-            lastUpdate: new Date(),
             lastPoint: new THREE.Vector3(0,0,0),
             velocity: 0
         }
@@ -287,27 +330,25 @@ function setupControllers(){
         controller2.addEventListener('connected', function(event){
             this.add(buildController(event.data));
             const session = renderer.xr.getSession();
-            if(session.inputSources[0].handedness == 'left'){
+            if(session.inputSources[1].handedness == 'left'){
+                this.handedness = 'left';
                 this.buttons = controllerSetupLeft;
             }
             else{
+                this.handedness = 'right';
                 this.buttons = controllerSetupRight;
             }
+            this.activeMesh = null;
             resolve(); 
         });
         controller2.addEventListener('disconnected', function(){
             this.remove(this.children[0]);
         });
         controller2.drawingSpeed = {
-            lastUpdate: new Date(),
             lastPoint: new THREE.Vector3(0,0,0),
             velocity: 0
         }
         controllers.push(controller2);
-    });
-
-    Promise.all([controller1Promise, controller2Promise]).then(data =>{
-        animate();
     });
 
     //Add controller models
@@ -319,6 +360,10 @@ function setupControllers(){
     controllerGripR = renderer.xr.getControllerGrip(1);
     controllerGripR.add( controllerModelFactory.createControllerModel(controllerGripR));
     scene.add(controllerGripR);
+
+    Promise.all([controller1Promise, controller2Promise]).then(data =>{
+        p();
+    });
 }
 
 function buildController( data ) {
@@ -343,3 +388,22 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize( window.innerWidth, window.innerHeight );
 }
+
+//Eventlisteners
+
+window.addEventListener( 'resize', onWindowResize );
+
+document.addEventListener("keydown", function(event) {
+    if(event.key == 's'){
+        saveDrawing();
+    }
+    if(event.key == 'n'){
+        loadDrawing(true);
+    }
+    if(event.key == 'p'){
+        loadDrawing(false);
+    }
+    if(event.key == 'c'){
+        newFile();
+    }
+})

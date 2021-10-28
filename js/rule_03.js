@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { MeshLine, MeshLineMaterial } from '../js/MeshLine.js';
+import { MeshLine, MeshLineMaterial } from './MeshLine.js';
 
-class Stroke {
+class Rule03 {
     constructor(points , lineWidths){
         if(points == undefined){
             this.rule = 3;
@@ -32,4 +32,4 @@ class Stroke {
         this.mesh.geometry.setPoints(this.positions.flat(), p => this.lineWidths[count++]);
     }
 }
-export {Stroke};
+export {Rule03};
