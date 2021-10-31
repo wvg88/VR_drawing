@@ -1,23 +1,22 @@
 import * as THREE from 'three';
 import { MeshLine, MeshLineMaterial } from './MeshLine.js';
 
-class Rule03 {
-    constructor(points , lineWidths){
+class Rule02 {
+    constructor(points){
         if(points == undefined){
-            this.rule = 3;
+            this.rule = 2;
             this.positions = []; 
-            this.lineWidths = [];
+            this.lineWidth = 1;
             const line  = new MeshLine();
             const material = new MeshLineMaterial();
             this.mesh = new THREE.Mesh(line, material)
         }
         else{
-            this.rule = 3;
+            this.rule = 2;
             this.positions = points; 
-            this.lineWidths = lineWidths;
+            this.lineWidth = 1;
             const line  = new MeshLine();
-            let count = 0;
-            line.setPoints(this.positions.flat(), p => this.lineWidths[count++]);
+            line.setPoints(this.positions.flat(), p => this.lineWidth);
             const material = new MeshLineMaterial();
             this.mesh = new THREE.Mesh(line, material)
         }
@@ -26,9 +25,7 @@ class Rule03 {
         this.positions.push(pos.x);
         this.positions.push(pos.y);
         this.positions.push(pos.z);
-        this.lineWidths.push(speed);
-        let count = 0;
-        this.mesh.geometry.setPoints(this.positions, p => this.lineWidths[count++]);
+        this.mesh.geometry.setPoints(this.positions, p => this.lineWidth);
         if(this.positions.length > 1000){
             return true;
         }
@@ -37,4 +34,6 @@ class Rule03 {
         }
     }
 }
-export {Rule03};
+export {Rule02};
+
+

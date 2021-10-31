@@ -4,6 +4,8 @@ import { VRButton } from 'three/examples/jsm/webxr/VRButton';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory';
 import {Rule03} from './rule_03.js'
 import {Button} from './button.js'
+import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { Rule02 } from './rule_02.js';
 
 var camera, scene, renderer;
 var controllerGripL, controllerGripR;
@@ -49,6 +51,21 @@ function init(){
     renderer.shadowMap.enabled = true;
     renderer.xr.enabled = true;
     document.body.appendChild( VRButton.createButton( renderer ) );
+
+    const material = new THREE.LineBasicMaterial({
+        color: 0x55FF66,
+        linewidth: 10,
+    });
+    
+    const points = [];
+    points.push( new THREE.Vector3( - 10, 0, 0 ) );
+    points.push( new THREE.Vector3( 0, 10, 0 ) );
+    points.push( new THREE.Vector3( 10, 0, 0 ) );
+    
+    const geometry = new THREE.BufferGeometry().setFromPoints( points );
+    
+    const line = new THREE.Line( geometry, material );
+    scene.add( line );
     
     let setupControllersP = new Promise((resolve) => {
         setupControllers(resolve);
@@ -69,33 +86,6 @@ function render() {
     updateControllers();
     updateMeshes();
     renderer.render( scene, camera );
-}
-
-function startMesh(handedness, continousLine){
-    switch (activeRule) {
-        case 0:
-         
-            break;
-        case 1:
-          
-            break;
-        case 2:
-           
-            break;
-        case 3:
-            let l = new Rule03();
-            scene.add(l.mesh);
-            meshes.push(l);
-            break;
-    }
-    for(let i = 0; i < controllers.length; i++){
-        if(controllers[i].handedness == handedness){
-            controllers[i].activeMesh = meshes.length -1;
-            if(continousLine){
-                meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
-            }
-        }
-    }
 }
 
 function newFile(){
@@ -176,7 +166,6 @@ function saveShape(obj){
     }
 }
 
-
 function getDrawings(p){
     let request = new XMLHttpRequest();
     request.open('get', 'php/getDrawings.php', true);
@@ -237,6 +226,74 @@ function drawDrawing(drawing){
     }
 }
 
+function startMesh(handedness, continousLine){
+    switch (activeRule) {
+        case 0:
+
+            break;
+        case 1:
+          
+            break;
+        case 2:
+            let rule02 = new Rule02();
+            scene.add(rule02.mesh);
+            meshes.push(rule02);
+            break;
+        case 3:
+            let rule03 = new Rule03();
+            scene.add(rule03.mesh);
+            meshes.push(rule03);
+            break;
+    }
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].handedness == handedness){
+            controllers[i].activeMesh = meshes.length -1;
+            controllers[i].active = true;
+            if(continousLine){
+                meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
+            }
+        }
+    }
+}
+
+function updateMeshes(){
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].active){
+            if(controllers[i].activeMesh){
+                if(meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity)){
+                    startMesh(controllers[i].handedness, true);
+                }
+            }
+        }
+    }
+}
+
+function stopMesh(handedness){
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].handedness == handedness){
+            controllers[i].active = false;
+        }
+    }
+}
+
+function updateLineWidth(a, b){
+    b = b/4;
+    let thickness;
+    if(b > a){
+        thickness = a + (0.2*(b-a));
+    }
+    else{
+        thickness = a - (0.2*(a-b));
+    }
+    if(thickness > 0.05){
+        thickness = 0.05;
+    }
+    else if (thickness < 0.002){
+        thickness = 0.002;
+    }
+    return thickness;
+}
+
 function updateControllers(){
     const session = renderer.xr.getSession();
     let controllerCount = 0;
@@ -273,39 +330,41 @@ function updateControllers(){
     }
 }
 
-function updateMeshes(){
-    for(let i = 0; i < controllers.length; i++){
-        if(controllers[i].buttons[0].pressed){
-            if(meshes.length > 0){
-                if(meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity)){
-                    startMesh(controllers[i].handedness, true);
-                }
-            }
-        }
-    }
+function triggerPressL(){
+    startMesh("left");
 }
 
-function updateLineWidth(a, b){
-    b = b/4;
-    let thickness;
-    if(b > a){
-        thickness = a + (0.2*(b-a));
-    }
-    else{
-        thickness = a - (0.2*(a-b));
-    }
-    if(thickness > 0.05){
-        thickness = 0.05;
-    }
-    else if (thickness < 0.002){
-        thickness = 0.002;
-    }
-    return thickness;
+function triggerPressR(){
+    startMesh("right");
+}
+
+function triggerReleaseL(){
+    stopMesh("left");
+}
+
+function triggerReleaseR(){
+    stopMesh("right");
+}
+
+function xPress(){
+    newFile();
+}
+
+function yPress(){
+    saveDrawing();
+}
+
+function aPress(){
+    loadDrawing(true);
+}
+
+function bPress(){
+    loadDrawing(false);
 }
 
 function setupControllers(p){
-    let controllerSetupLeft = [new Button(startMesh, 'triggerUp', 'left'),new Button(null, 'triggerDown', null),new Button(null,'thumbstickPress', null),new Button(newFile,'x',null),new Button(saveDrawing,'y',null)];
-    let controllerSetupRight = [new Button(startMesh, 'triggerUp', 'right'),new Button(null,'triggerDown', null),new Button(null,'thumbstickPress', null),new Button(loadDrawing,'a', true),new Button(loadDrawing,'b',false)];
+    let controllerSetupLeft = [new Button(triggerPressL,triggerReleaseL, 'triggerDown'),new Button(null, null, 'sideTriggerDown'),new Button(null, null,'thumbstickPress'),new Button(xPress, null,'x'),new Button(yPress, null,'y')];
+    let controllerSetupRight = [new Button(triggerPressR,triggerReleaseR, 'triggerDown'),new Button(null, null, 'sideTriggerDown'),new Button(null, null,'thumbstickPress'),new Button(aPress, null,'a'),new Button(bPress, null,'b')];
     let controller1Promise = new Promise((resolve) => {
         controller1 = renderer.xr.getController(0);
         controller1.addEventListener('connected', function(event){
@@ -320,6 +379,7 @@ function setupControllers(p){
                 this.buttons = controllerSetupRight;
             }
             this.activeMesh = null;
+            this.active = false;
             resolve();
         });
         controller1.addEventListener('disconnected', function(){
@@ -346,6 +406,7 @@ function setupControllers(p){
                 this.buttons = controllerSetupRight;
             }
             this.activeMesh = null;
+            this.active = false;
             resolve(); 
         });
         controller2.addEventListener('disconnected', function(){
@@ -413,4 +474,45 @@ document.addEventListener("keydown", function(event) {
     if(event.key == 'c'){
         newFile();
     }
+    if(event.key == 'e'){ 
+        exportGLTF(scene);
+    }
 })
+
+function exportGLTF( input ) {
+    const exporter = new GLTFExporter();
+    const gltfExporter = new GLTFExporter();
+    const options = {
+
+    };
+    gltfExporter.parse( input, function ( result ) {
+
+        if ( result instanceof ArrayBuffer ) {
+            saveArrayBuffer( result, 'scene.glb' );
+        } 
+        else {
+            const output = JSON.stringify( result, null, 2 );
+            console.log( output );
+            saveString( output, 'scene.gltf' );
+        }
+    }, options );
+}
+
+function save( blob, filename ) {    
+    const link = document.createElement('a');
+    link.style.display = 'none';
+    document.body.appendChild( link ); // Firefox workaround, see #6594
+    link.href = URL.createObjectURL( blob );
+    link.download = filename;
+    link.click();
+    // URL.revokeObjectURL( url ); breaks Firefox...
+}
+
+function saveString( text, filename ) {
+    save( new Blob( [ text ], { type: 'text/plain' } ), filename );
+}
+
+
+function saveArrayBuffer( buffer, filename ) {
+    save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
+}

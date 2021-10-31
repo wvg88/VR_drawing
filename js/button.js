@@ -1,7 +1,7 @@
 class Button {
-    constructor(activation, sort, parameter){
-        this.activation = activation;
-        this.parameter = parameter;
+    constructor(trigger, release, sort){
+        this.trigger = trigger;
+        this.release = release;
         this.pressed = false;
         this.previousState = false;
         this.sort = sort;
@@ -11,8 +11,13 @@ class Button {
         this.pressed = state;
         if(this.pressed != this.previousState){
             if(this.pressed){
-                if(typeof this.activation === "function"){
-                    this.activation(this.parameter);
+                if(typeof this.trigger === "function"){
+                    this.trigger();
+                }
+            }
+            else{
+                if(typeof this.release === "function"){
+                    this.release();
                 }
             }
         }
