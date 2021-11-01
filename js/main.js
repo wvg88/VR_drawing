@@ -19,7 +19,8 @@ var drawings = [];
 var activeDrawing = null;
 var editRights = true;
 var savingInProgress = false;
-var interactionOccured = false;
+var interactionOccuredL = false;
+var interactionOccuredR = false;
 
 var activeRule = 1;
 const urlParams = new URLSearchParams(window.location.search);
@@ -76,7 +77,13 @@ function render() {
 }
 
 function startMesh(handedness){
-    interactionOccured = true;
+    if(handedness == "left"){
+        interactionOccuredL = true;
+    }
+    else{
+        interactionOccuredR = true;
+    }
+    
     switch (activeRule) {
         case 1:
             addShapeToScene(new Rule01());
@@ -171,7 +178,8 @@ function saveDrawing(){
                     }); 
                 }
                 savingInProgress = false;
-                interactionOccured = false;
+                interactionOccuredL = false;
+                interactionOccuredR = false;
             }
         }
         else if(!editRights){
@@ -256,7 +264,8 @@ function loadDrawing(direction){
             editRights = false;
         }
         drawDrawing(JSON.parse(data['shapes']));
-        interactionOccured = false;
+        interactionOccuredL = false;
+        interactionOccuredR = false;
     }
 }
 
@@ -285,12 +294,16 @@ function newFile(){
     activeDrawing = null;
     editRights = true;
     clearScene();
+    interactionOccuredL = false;
+    interactionOccuredR = false;
 }
 
 function clearScene(){
     for(let i = 0; i < meshes.length; i++){
         scene.remove(meshes[i].mesh); 
     }
+    controllers[0].activeMesh = null;
+    controllers[1].activeMesh = null;
     meshes = [];
 }
 
@@ -449,7 +462,7 @@ function triggerPressL(){
         case 2:
             for(let i = 0; i < controllers.length; i++){
                 if(controllers[i].handedness == "left"){
-                    if(controllers[i].activeMesh == null && !interactionOccured){
+                    if(controllers[i].activeMesh == null && !interactionOccuredL){
                         startMesh("left");
                     }
                     else{
@@ -477,7 +490,7 @@ function triggerPressR(){
         case 2:
             for(let i = 0; i < controllers.length; i++){
                 if(controllers[i].handedness == "right"){
-                    if(controllers[i].activeMesh == null && !interactionOccured){
+                    if(controllers[i].activeMesh == null && !interactionOccuredR){
                         startMesh("right");
                     }
                     else{
@@ -550,7 +563,7 @@ document.addEventListener("keydown", function(event) {
     if(event.key == 's'){
         saveDrawing();
     }
-    if(event.key == 'n'){
+    if(event.key == 'o'){
         loadDrawing(true);
     }
     if(event.key == 'p'){

@@ -34,7 +34,7 @@ class Rule01 {
         this.positions.push(pos.y);
         this.positions.push(pos.z);
 
-        const position =  this.mesh.geometry.attributes.position.array;
+        const position = this.mesh.geometry.attributes.position.array;
 
         position[this.indexCount++] = pos2.x;
         position[this.indexCount++] = pos2.y;

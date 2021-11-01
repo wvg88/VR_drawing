@@ -4,7 +4,7 @@ import { MeshLine, MeshLineMaterial } from './MeshLine.js';
 class Rule03 {
     constructor(points , lineWidth){
         this.rule = 3;
-        this.maxPoints = 800;
+        this.maxPoints = 500;
         const line  = new MeshLine();
         const material = new MeshLineMaterial();
         if(points == undefined){

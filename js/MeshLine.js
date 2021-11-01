@@ -356,7 +356,7 @@ import * as THREE from 'three';
       next[l - 3] = position.x
       next[l - 2] = position.y
       next[l - 1] = position.z
-  
+      
       this._attributes.position.needsUpdate = true
       this._attributes.previous.needsUpdate = true
       this._attributes.next.needsUpdate = true

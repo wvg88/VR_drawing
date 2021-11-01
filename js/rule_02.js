@@ -4,17 +4,20 @@ import { MeshLine, MeshLineMaterial } from './MeshLine.js';
 class Rule02 {
     constructor(points){
         this.rule = 2;
-        this.lineWidth = 0.012;
-        this.maxPoints = 50;
+        this.lineWidth = 0.003;
+        this.maxPoints = 4000;
         const line  = new MeshLine();
-        const material = new MeshLineMaterial();
+        const material = new MeshLineMaterial({
+            lineWidth: this.lineWidth
+        });
         if(points == undefined){
             this.positions = []; 
+            line.setPoints(this.positions);
             this.mesh = new THREE.Mesh(line, material)
         }
         else{
             this.positions = points; 
-            line.setPoints(this.positions.flat(), p => this.lineWidth);
+            line.setPoints(this.positions);
             this.mesh = new THREE.Mesh(line, material)
         }
     }
@@ -22,7 +25,8 @@ class Rule02 {
         this.positions.push(pos.x);
         this.positions.push(pos.y);
         this.positions.push(pos.z);
-        this.mesh.geometry.setPoints(this.positions, p => this.lineWidth);
+        // this.mesh.geometry.advance(pos);
+        this.mesh.geometry.setPoints(this.positions);
     }
 
     startBrokenShape(pos, lineWidth){
