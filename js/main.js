@@ -2,10 +2,11 @@ import * as THREE from 'three';
 import { MeshLine, MeshLineMaterial } from '../js/MeshLine.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory';
-import {Rule03} from './rule_03.js'
-import {Button} from './button.js'
+import { Button } from './button.js'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { Rule03 } from './rule_03.js'
 import { Rule02 } from './rule_02.js';
+import { Rule01 } from './rule_01.js';
 
 var camera, scene, renderer;
 var controllerGripL, controllerGripR;
@@ -18,8 +19,9 @@ var drawings = [];
 var activeDrawing = null;
 var editRights = true;
 var savingInProgress = false;
+var interactionOccured = false;
 
-var activeRule = 0;
+var activeRule = 1;
 const urlParams = new URLSearchParams(window.location.search);
 if(urlParams.get('rule')){
     activeRule = parseInt(urlParams.get('rule'));
@@ -51,21 +53,6 @@ function init(){
     renderer.shadowMap.enabled = true;
     renderer.xr.enabled = true;
     document.body.appendChild( VRButton.createButton( renderer ) );
-
-    const material = new THREE.LineBasicMaterial({
-        color: 0x55FF66,
-        linewidth: 10,
-    });
-    
-    const points = [];
-    points.push( new THREE.Vector3( - 10, 0, 0 ) );
-    points.push( new THREE.Vector3( 0, 10, 0 ) );
-    points.push( new THREE.Vector3( 10, 0, 0 ) );
-    
-    const geometry = new THREE.BufferGeometry().setFromPoints( points );
-    
-    const line = new THREE.Line( geometry, material );
-    scene.add( line );
     
     let setupControllersP = new Promise((resolve) => {
         setupControllers(resolve);
@@ -88,17 +75,66 @@ function render() {
     renderer.render( scene, camera );
 }
 
-function newFile(){
-    activeDrawing = null;
-    editRights = true;
-    clearScene();
+function startMesh(handedness){
+    interactionOccured = true;
+    switch (activeRule) {
+        case 1:
+            addShapeToScene(new Rule01());
+            break;
+        case 2:
+            addShapeToScene(new Rule02());
+            break;
+        case 3:
+            addShapeToScene(new Rule03());
+            break;
+    }
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].handedness == handedness){
+            controllers[i].activeMesh = meshes.length -1;
+        }
+    }
 }
 
-function clearScene(){
-    for(let i = 0; i < meshes.length; i++){
-        scene.remove(meshes[i].mesh); 
+function updateMeshes(){
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].activeMesh != null){
+            let other = 1;
+            if(i == 1){
+                other = 0;
+            }
+            meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[other].position,controllers[i].drawingSpeed.velocity);
+            if(meshes[controllers[i].activeMesh].checkMemory()){
+                let oldMesh = controllers[i].activeMesh;
+                startMesh("right");
+                updateBrokenShape(controllers[i].handedness,meshes[oldMesh]);
+            }
+        }
     }
-    meshes = [];
+}
+
+function updateBrokenShape(handedness, oldMesh){
+    let number = 4;
+    let pos = oldMesh.positions.slice(oldMesh.positions.length - (number*3) );
+    let lw;
+    if(Array.isArray(oldMesh.lineWidth)){
+        lw = oldMesh.lineWidth.slice(oldMesh.lineWidth.length - number);
+    }
+    else{
+        lw = oldMesh.lineWidth;
+    }
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].handedness == handedness){
+            meshes[controllers[i].activeMesh].startBrokenShape(pos, lw);
+        }
+    }
+}
+
+function stopMesh(handedness){
+    for(let i = 0; i < controllers.length; i++){
+        if(controllers[i].handedness == handedness){
+            controllers[i].activeMesh = null;
+        }
+    }
 }
 
 function saveDrawing(){
@@ -135,6 +171,7 @@ function saveDrawing(){
                     }); 
                 }
                 savingInProgress = false;
+                interactionOccured = false;
             }
         }
         else if(!editRights){
@@ -147,22 +184,23 @@ function saveDrawing(){
 }
 
 function saveShape(obj){
-    if(obj.rule == 1){
-
-    }
-    else if(obj.rule == 2){
-        
-    }
-    else if(obj.rule == 3){
-        let shapeObject = {
-            rule: obj.rule,
-            points: obj.positions,
-            lineWidths: obj.lineWidths
-        }
-        return shapeObject;
-    }
-    else{
-        return [];
+    let shapeObject;
+    switch (obj.rule) {
+        case 1: case 2:
+            shapeObject = {
+                rule: obj.rule,
+                points: obj.positions,
+            }
+            return shapeObject;
+        case 3:
+            shapeObject = {
+                rule: obj.rule,
+                points: obj.positions,
+                lineWidths: obj.lineWidth
+            }
+            return shapeObject;
+        default:
+            return [];
     }
 }
 
@@ -184,19 +222,24 @@ function loadDrawing(direction){
     if(activeDrawing != null){
         if(direction){
             activeDrawing++;
-            if(activeDrawing > drawings.length -1){
+            if(activeDrawing > drawings.length - 1){
                 activeDrawing = 0;
             }
         }
         else{
             activeDrawing--;
             if(activeDrawing < 0){
-                activeDrawing = drawings.length -1;
+                activeDrawing = drawings.length - 1;
             }
         }
     }
     else{
-        activeDrawing = 0;
+        if(direction){
+            activeDrawing = 0;
+        }
+        else{
+            activeDrawing = drawings.length - 1;
+        }  
     }
     let request = new XMLHttpRequest();
     const formData = new FormData();
@@ -213,85 +256,42 @@ function loadDrawing(direction){
             editRights = false;
         }
         drawDrawing(JSON.parse(data['shapes']));
+        interactionOccured = false;
     }
 }
 
 function drawDrawing(drawing){
-    for(const line of drawing){
-       if(line.rule == 3){
-            let l = new Rule03(line.points, line.lineWidths);
-            scene.add(l.mesh);
-            meshes.push(l);
-       }
-    }
-}
-
-function startMesh(handedness, continousLine){
-    switch (activeRule) {
-        case 0:
-
-            break;
-        case 1:
-          
-            break;
-        case 2:
-            let rule02 = new Rule02();
-            scene.add(rule02.mesh);
-            meshes.push(rule02);
-            break;
-        case 3:
-            let rule03 = new Rule03();
-            scene.add(rule03.mesh);
-            meshes.push(rule03);
-            break;
-    }
-    for(let i = 0; i < controllers.length; i++){
-        if(controllers[i].handedness == handedness){
-            controllers[i].activeMesh = meshes.length -1;
-            controllers[i].active = true;
-            if(continousLine){
-                meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity);
-            }
+    for(const shape of drawing){
+        switch (shape.rule) {
+            case 1:
+                addShapeToScene(new Rule01(shape.points));
+                break;
+            case 2:
+                addShapeToScene(new Rule02(shape.points));
+                break;
+            case 3:
+                addShapeToScene(new Rule03(shape.points, shape.lineWidths));
+                break;
         }
     }
 }
 
-function updateMeshes(){
-    for(let i = 0; i < controllers.length; i++){
-        if(controllers[i].active){
-            if(controllers[i].activeMesh){
-                if(meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[i].drawingSpeed.velocity)){
-                    startMesh(controllers[i].handedness, true);
-                }
-            }
-        }
-    }
+function addShapeToScene(shape){
+    scene.add(shape.mesh);
+    meshes.push(shape);
 }
 
-function stopMesh(handedness){
-    for(let i = 0; i < controllers.length; i++){
-        if(controllers[i].handedness == handedness){
-            controllers[i].active = false;
-        }
-    }
+function newFile(){
+    activeDrawing = null;
+    editRights = true;
+    clearScene();
 }
 
-function updateLineWidth(a, b){
-    b = b/4;
-    let thickness;
-    if(b > a){
-        thickness = a + (0.2*(b-a));
+function clearScene(){
+    for(let i = 0; i < meshes.length; i++){
+        scene.remove(meshes[i].mesh); 
     }
-    else{
-        thickness = a - (0.2*(a-b));
-    }
-    if(thickness > 0.05){
-        thickness = 0.05;
-    }
-    else if (thickness < 0.002){
-        thickness = 0.002;
-    }
-    return thickness;
+    meshes = [];
 }
 
 function updateControllers(){
@@ -330,36 +330,22 @@ function updateControllers(){
     }
 }
 
-function triggerPressL(){
-    startMesh("left");
-}
-
-function triggerPressR(){
-    startMesh("right");
-}
-
-function triggerReleaseL(){
-    stopMesh("left");
-}
-
-function triggerReleaseR(){
-    stopMesh("right");
-}
-
-function xPress(){
-    newFile();
-}
-
-function yPress(){
-    saveDrawing();
-}
-
-function aPress(){
-    loadDrawing(true);
-}
-
-function bPress(){
-    loadDrawing(false);
+function updateLineWidth(a, b){
+    b = b/4;
+    let thickness;
+    if(b > a){
+        thickness = a + (0.2*(b-a));
+    }
+    else{
+        thickness = a - (0.2*(a-b));
+    }
+    if(thickness > 0.05){
+        thickness = 0.05;
+    }
+    else if (thickness < 0.002){
+        thickness = 0.002;
+    }
+    return thickness;
 }
 
 function setupControllers(p){
@@ -379,7 +365,6 @@ function setupControllers(p){
                 this.buttons = controllerSetupRight;
             }
             this.activeMesh = null;
-            this.active = false;
             resolve();
         });
         controller1.addEventListener('disconnected', function(){
@@ -406,7 +391,6 @@ function setupControllers(p){
                 this.buttons = controllerSetupRight;
             }
             this.activeMesh = null;
-            this.active = false;
             resolve(); 
         });
         controller2.addEventListener('disconnected', function(){
@@ -449,6 +433,107 @@ function buildController( data ) {
             material = new THREE.MeshBasicMaterial( { opacity: 0.5, transparent: true } );
             return new THREE.Mesh( geometry, material );
     }
+}
+
+
+function triggerPressL(){
+    switch (activeRule) {
+        case 1:
+            for(let i = 0; i < controllers.length; i++){
+                if(controllers[i].activeMesh != null){
+                    break;
+                }
+            }
+            startMesh("left");
+            break;
+        case 2:
+            for(let i = 0; i < controllers.length; i++){
+                if(controllers[i].handedness == "left"){
+                    if(controllers[i].activeMesh == null && !interactionOccured){
+                        startMesh("left");
+                    }
+                    else{
+                        stopMesh("left");
+                    }
+                }
+            }
+            break;
+        case 3:
+            startMesh("left");
+            break;
+    }
+}
+
+function triggerPressR(){
+    switch (activeRule) {
+        case 1:
+            for(let i = 0; i < controllers.length; i++){
+                if(controllers[i].activeMesh != null){
+                    break;
+                }
+            }
+            startMesh("right");
+            break;
+        case 2:
+            for(let i = 0; i < controllers.length; i++){
+                if(controllers[i].handedness == "right"){
+                    if(controllers[i].activeMesh == null && !interactionOccured){
+                        startMesh("right");
+                    }
+                    else{
+                        stopMesh("right");
+                    }
+                }
+            }
+            break;
+        case 3:
+            startMesh("right");
+            break;
+    }
+}
+
+function triggerReleaseL(){
+    switch (activeRule) {
+        case 1:
+            stopMesh("left");
+            break;
+        case 2:
+            
+            break;
+        case 3:
+            stopMesh("left");
+            break;
+    }
+}
+
+function triggerReleaseR(){
+    switch (activeRule) {
+        case 1:
+            stopMesh("right");
+            break;
+        case 2:
+            
+            break;
+        case 3:
+            stopMesh("right");
+            break;
+    }
+}
+
+function xPress(){
+    newFile();
+}
+
+function yPress(){
+    saveDrawing();
+}
+
+function aPress(){
+    loadDrawing(true);
+}
+
+function bPress(){
+    loadDrawing(false);
 }
 
 function onWindowResize() {
@@ -511,7 +596,6 @@ function save( blob, filename ) {
 function saveString( text, filename ) {
     save( new Blob( [ text ], { type: 'text/plain' } ), filename );
 }
-
 
 function saveArrayBuffer( buffer, filename ) {
     save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
