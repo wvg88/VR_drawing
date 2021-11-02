@@ -112,7 +112,7 @@ function updateMeshes(){
             meshes[controllers[i].activeMesh].update(controllers[i].position, controllers[other].position,controllers[i].drawingSpeed.velocity);
             if(meshes[controllers[i].activeMesh].checkMemory()){
                 let oldMesh = controllers[i].activeMesh;
-                startMesh("right");
+                startMesh(controllers[i].handedness);
                 updateBrokenShape(controllers[i].handedness,meshes[oldMesh]);
             }
         }

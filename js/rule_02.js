@@ -5,7 +5,7 @@ class Rule02 {
     constructor(points){
         this.rule = 2;
         this.lineWidth = 0.003;
-        this.maxPoints = 4000;
+        this.maxPoints = 200;
         const line  = new MeshLine();
         const material = new MeshLineMaterial({
             lineWidth: this.lineWidth
@@ -25,7 +25,6 @@ class Rule02 {
         this.positions.push(pos.x);
         this.positions.push(pos.y);
         this.positions.push(pos.z);
-        // this.mesh.geometry.advance(pos);
         this.mesh.geometry.setPoints(this.positions);
     }
 

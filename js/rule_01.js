@@ -16,8 +16,8 @@ class Rule01 {
             this.indexCount = 0;
         }
         else{
-            this.positions = new Float32Array(points);
-            bufferAttribute = new THREE.BufferAttribute( this.positions, 3 );
+            this.positions = points;
+            bufferAttribute = new THREE.BufferAttribute( new Float32Array(this.positions), 3 );
             this.drawCount = points.length/3;
             this.indexCount = points.length;
         }
