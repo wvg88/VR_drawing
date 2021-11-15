@@ -1,14 +1,17 @@
+console.log('°°°° Development by Studio Krom °°°°');
+
 import * as THREE from 'three';
-import { MeshLine, MeshLineMaterial } from '../js/MeshLine.js';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory';
 import { Button } from './button.js'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Rule03 } from './rule_03.js'
 import { Rule02 } from './rule_02.js';
 import { Rule01 } from './rule_01.js';
 
-var camera, scene, renderer;
+var camera, scene, renderer, controls;
+var viewer = false;
 var controllerGripL, controllerGripR;
 var controller1, controller2;
 var controllers = [];
@@ -24,8 +27,12 @@ var interactionOccuredR = false;
 
 var activeRule = 1;
 const urlParams = new URLSearchParams(window.location.search);
+console.log(urlParams);
 if(urlParams.get('rule')){
     activeRule = parseInt(urlParams.get('rule'));
+}
+if(urlParams.get('viewer')){
+   viewer = (urlParams.get('viewer').toLowerCase() === 'true');
 }
 
 init();
@@ -34,8 +41,8 @@ function init(){
     let canvas = document.getElementById('canvas');
     scene = new THREE.Scene();
     scene.background = new THREE.Color( 0x000000);
-    camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 10 );
-    camera.position.set( 0, 1.6, 3 );
+    camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 0.1, 20 );
+    camera.position.set( 0, 1.6, 5 );
     scene.add( new THREE.HemisphereLight( 0x808080, 0x606060 ) );
 
     const light = new THREE.DirectionalLight( 0xffffff );
@@ -50,17 +57,28 @@ function init(){
 
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
-    // renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.shadowMap.enabled = true;
-    renderer.xr.enabled = true;
-    document.body.appendChild( VRButton.createButton( renderer ) );
-    
-    let setupControllersP = new Promise((resolve) => {
-        setupControllers(resolve);
-    });
+
+    let setupControllersP;
     let getDrawingsP = new Promise((resolve) => {
         getDrawings(resolve);
     });
+    if(!viewer){
+        renderer.xr.enabled = true;
+        document.body.appendChild( VRButton.createButton( renderer ) );
+        setupControllersP = new Promise((resolve) => {
+            setupControllers(resolve);
+        });
+    }
+    else{
+        setupControllersP = new Promise((resolve) => {
+            resolve();
+        });
+        controls = new OrbitControls( camera, renderer.domElement );
+        controls.minDistance = 2;
+        controls.maxDistance = 10;
+    }
+   
     Promise.all([setupControllersP, getDrawingsP]).then(data =>{
         animate();
     });
@@ -71,8 +89,11 @@ function animate(){
 }
 
 function render() {
-    updateControllers();
-    updateMeshes();
+    if(!viewer){
+        updateControllers();
+        updateMeshes();
+    }
+    
     renderer.render( scene, camera );
 }
 
@@ -302,8 +323,10 @@ function clearScene(){
     for(let i = 0; i < meshes.length; i++){
         scene.remove(meshes[i].mesh); 
     }
-    controllers[0].activeMesh = null;
-    controllers[1].activeMesh = null;
+    if(!viewer){
+        controllers[0].activeMesh = null;
+        controllers[1].activeMesh = null;
+    }
     meshes = [];
 }
 
@@ -573,7 +596,7 @@ document.addEventListener("keydown", function(event) {
         newFile();
     }
     if(event.key == 'e'){ 
-        exportGLTF(scene);
+        // exportGLTF(scene);
     }
 })
 
@@ -590,7 +613,6 @@ function exportGLTF( input ) {
         } 
         else {
             const output = JSON.stringify( result, null, 2 );
-            console.log( output );
             saveString( output, 'scene.gltf' );
         }
     }, options );
