@@ -81,6 +81,9 @@ function init(){
    
     Promise.all([setupControllersP, getDrawingsP]).then(data =>{
         animate();
+        if(viewer){
+            loadDrawing(true);
+        }
     });
 }
 
