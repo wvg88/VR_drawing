@@ -16,6 +16,10 @@ var controllerGripL, controllerGripR;
 var controller1, controller2;
 var controllers = [];
 var meshes = [];
+const dotGeo = new THREE.SphereGeometry( 0.004, 32, 16 );
+const material = new THREE.MeshBasicMaterial( { color: 0xff0000} );
+const dotL = new THREE.Mesh( dotGeo, material );
+const dotR = new THREE.Mesh( dotGeo, material );
 
 var controllUpdateTimer = 0;
 var drawings = [];
@@ -69,6 +73,8 @@ function init(){
         setupControllersP = new Promise((resolve) => {
             setupControllers(resolve);
         });
+        scene.add(dotL);
+        scene.add(dotR);
     }
     else{
         setupControllersP = new Promise((resolve) => {
@@ -339,6 +345,9 @@ function updateControllers(){
     if (session) {
         for (const source of session.inputSources) {
             if(controllerCount == 0){
+                dotL.position.x = controllers[0].position.x;
+                dotL.position.y = controllers[0].position.y;
+                dotL.position.z = controllers[0].position.z;
                 if(controllUpdateTimer == 0){
                     controllers[0].drawingSpeed.velocity = updateLineWidth(controllers[0].drawingSpeed.velocity,controllers[0].position.distanceTo(controllers[0].drawingSpeed.lastPoint));
                     controllers[0].drawingSpeed.lastPoint = new THREE.Vector3(controllers[0].position.x, controllers[0].position.y,controllers[0].position.z);
@@ -350,6 +359,9 @@ function updateControllers(){
                 controllers[0].buttons[4].update(source.gamepad.buttons[5].pressed);
             }
             else if(controllerCount == 1){
+                dotR.position.x = controllers[1].position.x;
+                dotR.position.y = controllers[1].position.y;
+                dotR.position.z = controllers[1].position.z
                 if(controllUpdateTimer == 0){
                     controllers[1].drawingSpeed.velocity = updateLineWidth(controllers[1].drawingSpeed.velocity,controllers[1].position.distanceTo(controllers[1].drawingSpeed.lastPoint));
                     controllers[1].drawingSpeed.lastPoint = new THREE.Vector3(controllers[1].position.x, controllers[1].position.y,controllers[1].position.z);
@@ -443,13 +455,13 @@ function setupControllers(p){
     });
 
     //Add controller models
-    const controllerModelFactory = new XRControllerModelFactory();
     controllerGripL = renderer.xr.getControllerGrip(0);
-    controllerGripL.add(controllerModelFactory.createControllerModel(controllerGripL));
+    controllerGripL.add(dotL);
     scene.add(controllerGripL);
 
     controllerGripR = renderer.xr.getControllerGrip(1);
-    controllerGripR.add( controllerModelFactory.createControllerModel(controllerGripR));
+    controllerGripR.add(dotR);
+    // controllerGripR.add( controllerModelFactory.createControllerModel(controllerGripR));
     scene.add(controllerGripR);
 
     Promise.all([controller1Promise, controller2Promise]).then(data =>{
@@ -461,6 +473,7 @@ function buildController( data ) {
     let geometry, material;
     switch ( data.targetRayMode ) {
         case 'tracked-pointer':
+            console.log('trackedf');
             geometry = new THREE.BufferGeometry();
             geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( [ 0, 0, 0, 0, 0, - 1 ], 3 ) );
             geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( [ 0.5, 0.5, 0.5, 0, 0, 0 ], 3 ) );
