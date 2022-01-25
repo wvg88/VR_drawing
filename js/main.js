@@ -13,7 +13,6 @@ import ThreeMeshUI from 'three-mesh-ui';
 import Block from 'three-mesh-ui/src/components/Block.js';
 import Text from 'three-mesh-ui/src/components/Text.js';
 import FontJSON from '../assets/Roboto-msdf.json' assert {type: "json"};
-import FontImage from '../assets/Roboto-msdf.png';
 
 var camera, scene, renderer, controls;
 var viewer = false;
@@ -72,7 +71,7 @@ function init(){
         width: 1.2,
         height: 0.7,
         padding: 0.2,
-        fontFamily: FontJSON,
+        fontFamily: '../assets/Roboto-msdf.json',
         fontTexture: '../assets/Roboto-msdf.png',
        });
        
