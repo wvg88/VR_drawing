@@ -9,6 +9,11 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Rule03 } from './rule_03.js'
 import { Rule02 } from './rule_02.js';
 import { Rule01 } from './rule_01.js';
+import ThreeMeshUI from 'three-mesh-ui';
+import Block from 'three-mesh-ui/src/components/Block.js';
+import Text from 'three-mesh-ui/src/components/Text.js';
+import FontJSON from '../assets/Roboto-msdf.json' assert {type: "json"};
+import FontImage from '../assets/Roboto-msdf.png';
 
 var camera, scene, renderer, controls;
 var viewer = false;
@@ -63,6 +68,25 @@ function init(){
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.shadowMap.enabled = true;
 
+    const container = new Block({
+        width: 1.2,
+        height: 0.7,
+        padding: 0.2,
+        fontFamily: FontJSON,
+        fontTexture: '../assets/Roboto-msdf.png',
+       });
+       
+       //
+       
+    const text = new Text({
+     content: "Some text to be displayed"
+    });
+
+    container.add( text );
+
+    // scene is a THREE.Scene (see three.js)
+    scene.add( container );
+
     let setupControllersP;
     let getDrawingsP = new Promise((resolve) => {
         getDrawings(resolve);
@@ -102,7 +126,7 @@ function render() {
         updateControllers();
         updateMeshes();
     }
-    
+    ThreeMeshUI.update();
     renderer.render( scene, camera );
 }
 

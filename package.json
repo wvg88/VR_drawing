@@ -11,6 +11,7 @@
   "license": "ISC",
   "homepage": "https://bitbucket.org/studiokrom/clean#readme",
   "dependencies": {
-    "three": "^0.132.2"
+    "three": "^0.132.2",
+    "three-mesh-ui": "^6.2.0"
   }
 }
