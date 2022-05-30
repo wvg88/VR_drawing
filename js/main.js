@@ -15,6 +15,8 @@ import Text from 'three-mesh-ui/src/components/Text.js';
 import FontJSON from '../assets/Roboto-msdf.json' assert {type: "json"};
 
 var camera, scene, renderer, controls;
+var UIcontainer;
+
 var viewer = false;
 var controllerGripL, controllerGripR;
 var controller1, controller2;
@@ -32,10 +34,12 @@ var editRights = true;
 var savingInProgress = false;
 var interactionOccuredL = false;
 var interactionOccuredR = false;
+let UIText = new Text({content: ''});
+
+
 
 var activeRule = 1;
 const urlParams = new URLSearchParams(window.location.search);
-console.log(urlParams);
 if(urlParams.get('rule')){
     activeRule = parseInt(urlParams.get('rule'));
 }
@@ -67,24 +71,22 @@ function init(){
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.shadowMap.enabled = true;
 
-    const container = new Block({
-        width: 1.2,
-        height: 0.7,
-        padding: 0.2,
+    UIcontainer = new Block({
+        width: 1.0,
+        height: 0.3,
+        padding: 0.1,
         fontFamily: '../assets/Roboto-msdf.json',
         fontTexture: '../assets/Roboto-msdf.png',
        });
        
        //
-       
-    const text = new Text({
-     content: "Some text to be displayed"
-    });
 
-    container.add( text );
+   
+
+    UIcontainer.add( UIText );
 
     // scene is a THREE.Scene (see three.js)
-    scene.add( container );
+    scene.add( UIcontainer );
 
     let setupControllersP;
     let getDrawingsP = new Promise((resolve) => {
@@ -121,11 +123,22 @@ function animate(){
 }
 
 function render() {
+    
     if(!viewer){
         updateControllers();
         updateMeshes();
+
+        
+        
+        UIcontainer.position.x = camera.position.x;
+        UIcontainer.position.y = camera.position.y;
+        
+        
+        
+        UIcontainer.position.z = camera.position.z - 1.0;
     }
     ThreeMeshUI.update();
+    
     renderer.render( scene, camera );
 }
 
@@ -225,6 +238,7 @@ function saveDrawing(){
                 if(activeDrawing == null){
                     let updateIDP = new Promise((resolve) => {
                         getDrawings(resolve);
+                        
                     });
                     updateIDP.then((value) => {
                         activeDrawing = drawings.length -1;
@@ -283,9 +297,13 @@ function loadDrawing(direction){
     if(activeDrawing != null){
         if(direction){
             activeDrawing++;
+           
+            
+ 
             if(activeDrawing > drawings.length - 1){
                 activeDrawing = 0;
             }
+
         }
         else{
             activeDrawing--;
@@ -302,6 +320,10 @@ function loadDrawing(direction){
             activeDrawing = drawings.length - 1;
         }  
     }
+    UIText.set({content:
+        activeDrawing.toString()
+    })
+
     let request = new XMLHttpRequest();
     const formData = new FormData();
     formData.append('id', drawings[activeDrawing]);
@@ -380,6 +402,12 @@ function updateControllers(){
                 controllers[0].buttons[2].update(source.gamepad.buttons[3].pressed);
                 controllers[0].buttons[3].update(source.gamepad.buttons[4].pressed);
                 controllers[0].buttons[4].update(source.gamepad.buttons[5].pressed);
+                
+
+                // positioning UI Text above controller
+                /*UIcontainer.position.x = controllers[0].position.x;
+                UIcontainer.position.y = controllers[0].position.y + 0.4;
+                UIcontainer.position.z = controllers[0].position.z;*/
             }
             else if(controllerCount == 1){
                 dotR.position.x = controllers[1].position.x;
@@ -674,3 +702,5 @@ function saveString( text, filename ) {
 function saveArrayBuffer( buffer, filename ) {
     save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
 }
+
+//function UI( inputtext, usecase ){}
