@@ -16,6 +16,7 @@ import FontJSON from '../assets/Roboto-msdf.json' assert {type: "json"};
 
 var camera, scene, renderer, controls;
 var UIcontainer;
+var UIBlockRight;
 
 var viewer = false;
 var controllerGripL, controllerGripR;
@@ -34,8 +35,9 @@ var editRights = true;
 var savingInProgress = false;
 var interactionOccuredL = false;
 var interactionOccuredR = false;
-let UIText = new Text({content: ''});
-
+let UIText = new Text({content: "Druk A voor de volgende sculptuur en \n B voor de vorige(maar niet te snel,\n deze moet even laden)\nDruk op"});
+let UITextRight = new Text({content: "A = Volgende\n B = Vorige",fontSize:0.03});
+let first_press = false;
 
 
 var activeRule = 1;
@@ -73,19 +75,25 @@ function init(){
 
     UIcontainer = new Block({
         width: 1.0,
-        height: 0.3,
-        padding: 0.1,
+        height: 0.6,
+        padding: 0.05,
         fontFamily: '../assets/Roboto-msdf.json',
-        fontTexture: '../assets/Roboto-msdf.png',
+        fontTexture: '../assets/Roboto-msdf.png'
        });
+    UIcontainer.position.set(camera.position.x, camera.position.y, -1.8);
        
-       //
+  /*  UIBlockRight = new Block({
+        width: 0.6,
+        height:0.2,
+        fontFamily: '../assets/Roboto-msdf.json',
+        fontTexture: '../assets/Roboto-msdf.png'
+    });
 
-   
-
+    UIBlockRight.add( UITextRight );*/
+    
     UIcontainer.add( UIText );
 
-    // scene is a THREE.Scene (see three.js)
+    
     scene.add( UIcontainer );
 
     let setupControllersP;
@@ -100,12 +108,15 @@ function init(){
         });
         scene.add(dotL);
         scene.add(dotR);
+        
+      //  scene.add( UIBlockRight );
     }
     else{
         setupControllersP = new Promise((resolve) => {
             resolve();
         });
         controls = new OrbitControls( camera, renderer.domElement );
+        
         controls.minDistance = 2;
         controls.maxDistance = 10;
     }
@@ -127,18 +138,8 @@ function render() {
     if(!viewer){
         updateControllers();
         updateMeshes();
-
-        
-        
-        UIcontainer.position.x = camera.position.x;
-        UIcontainer.position.y = camera.position.y;
-        
-        
-        
-        UIcontainer.position.z = camera.position.z - 1.0;
     }
     ThreeMeshUI.update();
-    
     renderer.render( scene, camera );
 }
 
@@ -297,9 +298,7 @@ function loadDrawing(direction){
     if(activeDrawing != null){
         if(direction){
             activeDrawing++;
-           
-            
- 
+
             if(activeDrawing > drawings.length - 1){
                 activeDrawing = 0;
             }
@@ -321,6 +320,7 @@ function loadDrawing(direction){
         }  
     }
     UIText.set({content:
+        "R \n A = volgende\n B = Vorige \n\n L \n Y = Opslaan \n X = Nieuw \n Tekening:" +
         activeDrawing.toString()
     })
 
@@ -405,9 +405,13 @@ function updateControllers(){
                 
 
                 // positioning UI Text above controller
-                /*UIcontainer.position.x = controllers[0].position.x;
-                UIcontainer.position.y = controllers[0].position.y + 0.4;
-                UIcontainer.position.z = controllers[0].position.z;*/
+               /* UIBlockRight.position.x = controllers[0].position.x;
+                UIBlockRight.position.y = controllers[0].position.y + 0.2;
+                UIBlockRight.position.z = controllers[0].position.z;
+                UIBlockRight.rotation.x = controllers[0].rotation.x;
+                UIBlockRight.rotation.y = controllers[0].rotation.y;
+                UIBlockRight.rotation.z = controllers[0].rotation.z;*/
+                
             }
             else if(controllerCount == 1){
                 dotR.position.x = controllers[1].position.x;
@@ -624,7 +628,14 @@ function triggerReleaseR(){
 }
 
 function xPress(){
-    newFile();
+    //DoubleClick Safeguard
+    if(first_press) {
+        newFile();
+        first_press = false;
+    } else {
+        first_press = true;
+        window.setTimeout(function() { first_press = false; }, 500);
+    }
 }
 
 function yPress(){
@@ -703,4 +714,3 @@ function saveArrayBuffer( buffer, filename ) {
     save( new Blob( [ buffer ], { type: 'application/octet-stream' } ), filename );
 }
 
-//function UI( inputtext, usecase ){}
