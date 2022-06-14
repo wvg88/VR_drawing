@@ -14,33 +14,48 @@ import Block from 'three-mesh-ui/src/components/Block.js';
 import Text from 'three-mesh-ui/src/components/Text.js';
 import FontJSON from '../assets/Roboto-msdf.json' assert {type: "json"};
 
-var camera, scene, renderer, controls;
-var UIcontainer;
-var UIBlockRight;
 
-var viewer = false;
-var controllerGripL, controllerGripR;
-var controller1, controller2;
-var controllers = [];
-var meshes = [];
+import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+let camera, scene, renderer, controls, composer;
+let UIcontainer;
+let UIBlockRight;
+
+const params = {
+    exposure: 1.0,
+    bloomStrength: 0.7,
+    bloomThreshold: 0,
+    bloomRadius: 0
+};
+
+
+
+let viewer = false;
+let controllerGripL, controllerGripR;
+let controller1, controller2;
+let controllers = [];
+let meshes = [];
 const dotGeo = new THREE.SphereGeometry( 0.004, 32, 16 );
 const material = new THREE.MeshBasicMaterial( { color: 0xff0000} );
 const dotL = new THREE.Mesh( dotGeo, material );
 const dotR = new THREE.Mesh( dotGeo, material );
 
-var controllUpdateTimer = 0;
-var drawings = [];
-var activeDrawing = null;
-var editRights = true;
-var savingInProgress = false;
-var interactionOccuredL = false;
-var interactionOccuredR = false;
+let controllUpdateTimer = 0;
+let drawings = [];
+let activeDrawing = null;
+let editRights = true;
+let savingInProgress = false;
+let interactionOccuredL = false;
+let interactionOccuredR = false;
 let UIText = new Text({content: "Druk A voor de volgende sculptuur en \n B voor de vorige(maar niet te snel,\n deze moet even laden)\nDruk op"});
 let UITextRight = new Text({content: "A = Volgende\n B = Vorige",fontSize:0.03});
 let first_press = false;
 
 
-var activeRule = 1;
+let activeRule = 1;
 const urlParams = new URLSearchParams(window.location.search);
 if(urlParams.get('rule')){
     activeRule = parseInt(urlParams.get('rule'));
@@ -72,6 +87,33 @@ function init(){
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.shadowMap.enabled = true;
+    renderer.toneMapping = THREE.ReinhardToneMapping;
+
+    const renderScene = new RenderPass( scene, camera );
+
+    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+    bloomPass.threshold = params.bloomThreshold;
+    bloomPass.strength = params.bloomStrength;
+    bloomPass.radius = params.bloomRadius;
+
+    composer = new EffectComposer( renderer );
+    composer.addPass( renderScene );
+    composer.addPass( bloomPass );
+
+    const gui = new GUI();
+    
+        gui.add( params, 'exposure', 0.1, 2 ).onChange( function ( value ) {
+					renderer.toneMappingExposure = Math.pow( value, 4.0 );
+				} );
+	    gui.add( params, 'bloomThreshold', 0.0, 1.0 ).onChange( function ( value ) {
+					bloomPass.threshold = Number( value );
+				} );
+	    gui.add( params, 'bloomStrength', 0.0, 3.0 ).onChange( function ( value ) {
+					bloomPass.strength = Number( value );
+				} );
+	    gui.add( params, 'bloomRadius', 0.0, 1.0 ).step( 0.01 ).onChange( function ( value ) {
+					bloomPass.radius = Number( value );
+				} );
 
     UIcontainer = new Block({
         width: 1.0,
@@ -94,7 +136,7 @@ function init(){
     UIcontainer.add( UIText );
 
     
-    scene.add( UIcontainer );
+    
 
     let setupControllersP;
     let getDrawingsP = new Promise((resolve) => {
@@ -108,7 +150,7 @@ function init(){
         });
         scene.add(dotL);
         scene.add(dotR);
-        
+        scene.add( UIcontainer );
       //  scene.add( UIBlockRight );
     }
     else{
@@ -138,9 +180,9 @@ function render() {
     if(!viewer){
         updateControllers();
         updateMeshes();
-    }
+    }else{ scene.rotation.y += 0.001 }
     ThreeMeshUI.update();
-    renderer.render( scene, camera );
+    composer.render( scene, camera );
 }
 
 function startMesh(handedness){
