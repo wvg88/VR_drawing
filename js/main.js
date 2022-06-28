@@ -87,43 +87,10 @@ function init(){
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.shadowMap.enabled = true;
-    renderer.toneMapping = THREE.ReinhardToneMapping;
 
-    const renderScene = new RenderPass( scene, camera );
 
-    const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
-    bloomPass.threshold = params.bloomThreshold;
-    bloomPass.strength = params.bloomStrength;
-    bloomPass.radius = params.bloomRadius;
 
-    composer = new EffectComposer( renderer );
-    composer.addPass( renderScene );
-    composer.addPass( bloomPass );
 
-    const gui = new GUI();
-    
-        gui.add( params, 'exposure', 0.1, 2 ).onChange( function ( value ) {
-					renderer.toneMappingExposure = Math.pow( value, 4.0 );
-				} );
-	    gui.add( params, 'bloomThreshold', 0.0, 1.0 ).onChange( function ( value ) {
-					bloomPass.threshold = Number( value );
-				} );
-	    gui.add( params, 'bloomStrength', 0.0, 3.0 ).onChange( function ( value ) {
-					bloomPass.strength = Number( value );
-				} );
-	    gui.add( params, 'bloomRadius', 0.0, 1.0 ).step( 0.01 ).onChange( function ( value ) {
-					bloomPass.radius = Number( value );
-				} );
-
-    UIcontainer = new Block({
-        width: 1.0,
-        height: 0.6,
-        padding: 0.05,
-        fontFamily: '../assets/Roboto-msdf.json',
-        fontTexture: '../assets/Roboto-msdf.png'
-       });
-    UIcontainer.position.set(camera.position.x, camera.position.y, -1.8);
-       
   /*  UIBlockRight = new Block({
         width: 0.6,
         height:0.2,
@@ -133,6 +100,16 @@ function init(){
 
     UIBlockRight.add( UITextRight );*/
     
+
+    UIcontainer = new Block({
+        width: 1.0,
+        height: 0.6,
+        padding: 0.05,
+        fontFamily: '../assets/Roboto-msdf.json',
+        fontTexture: '../assets/Roboto-msdf.png'
+       });
+    UIcontainer.position.set(camera.position.x, camera.position.y, -1.8);
+
     UIcontainer.add( UIText );
 
     
@@ -154,6 +131,39 @@ function init(){
       //  scene.add( UIBlockRight );
     }
     else{
+        ////////////////BLOOM, GUI, TEXT
+        renderer.toneMapping = THREE.ReinhardToneMapping;
+
+        const renderScene = new RenderPass( scene, camera );
+    
+        const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+        bloomPass.threshold = params.bloomThreshold;
+        bloomPass.strength = params.bloomStrength;
+        bloomPass.radius = params.bloomRadius;
+    
+        composer = new EffectComposer( renderer );
+        composer.addPass( renderScene );
+        composer.addPass( bloomPass );
+    
+    
+        const gui = new GUI();
+        
+            gui.add( params, 'exposure', 0.1, 2 ).onChange( function ( value ) {
+                        renderer.toneMappingExposure = Math.pow( value, 4.0 );
+                    } );
+            gui.add( params, 'bloomThreshold', 0.0, 1.0 ).onChange( function ( value ) {
+                        bloomPass.threshold = Number( value );
+                    } );
+            gui.add( params, 'bloomStrength', 0.0, 3.0 ).onChange( function ( value ) {
+                        bloomPass.strength = Number( value );
+                    } );
+            gui.add( params, 'bloomRadius', 0.0, 1.0 ).step( 0.01 ).onChange( function ( value ) {
+                        bloomPass.radius = Number( value );
+                    } );
+    
+
+           
+
         setupControllersP = new Promise((resolve) => {
             resolve();
         });
@@ -161,6 +171,8 @@ function init(){
         
         controls.minDistance = 2;
         controls.maxDistance = 10;
+
+        
     }
    
     Promise.all([setupControllersP, getDrawingsP]).then(data =>{
@@ -176,13 +188,16 @@ function animate(){
 }
 
 function render() {
-    
+    ThreeMeshUI.update();
     if(!viewer){
         updateControllers();
         updateMeshes();
-    }else{ scene.rotation.y += 0.001 }
-    ThreeMeshUI.update();
-    composer.render( scene, camera );
+        renderer.render( scene, camera );
+    }else{ 
+        scene.rotation.y += 0.001;
+        composer.render( scene, camera ); 
+    }
+   
 }
 
 function startMesh(handedness){
@@ -724,7 +739,6 @@ function exportGLTF( input ) {
     const exporter = new GLTFExporter();
     const gltfExporter = new GLTFExporter();
     const options = {
-
     };
     gltfExporter.parse( input, function ( result ) {
 
