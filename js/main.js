@@ -1,4 +1,4 @@
-console.log('°°°° Development by Studio Krom °°°°');
+console.log('°°°°Initial Development by Studio Krom,  v2 °°°°');
 
 import * as THREE from 'three';
 import { VRButton } from 'three/examples/jsm/webxr/VRButton';
@@ -12,7 +12,7 @@ import { Rule01 } from './rule_01.js';
 import ThreeMeshUI from 'three-mesh-ui';
 import Block from 'three-mesh-ui/src/components/Block.js';
 import Text from 'three-mesh-ui/src/components/Text.js';
-import FontJSON from '../assets/Roboto-msdf.json' assert {type: "json"};
+
 
 
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
@@ -26,9 +26,10 @@ let UIBlockRight;
 
 const params = {
     exposure: 1.0,
-    bloomStrength: 0.7,
+    bloomStrength: 1.2,
     bloomThreshold: 0,
-    bloomRadius: 0
+    bloomRadius: 0,
+    autoRotate: true
 };
 
 
@@ -47,11 +48,12 @@ let controllUpdateTimer = 0;
 let drawings = [];
 let activeDrawing = null;
 let editRights = true;
+let drawingTitle;
 let savingInProgress = false;
 let interactionOccuredL = false;
 let interactionOccuredR = false;
 let UIText = new Text({content: "Druk A voor de volgende sculptuur en \n B voor de vorige(maar niet te snel,\n deze moet even laden)\nDruk op"});
-let UITextRight = new Text({content: "A = Volgende\n B = Vorige",fontSize:0.03});
+// let UITextRight = new Text({content: "A = Volgende\n B = Vorige",fontSize:0.03});
 let first_press = false;
 
 
@@ -91,44 +93,37 @@ function init(){
 
 
 
-  /*  UIBlockRight = new Block({
-        width: 0.6,
-        height:0.2,
-        fontFamily: '../assets/Roboto-msdf.json',
-        fontTexture: '../assets/Roboto-msdf.png'
-    });
-
-    UIBlockRight.add( UITextRight );*/
-    
-
     UIcontainer = new Block({
         width: 1.0,
         height: 0.6,
         padding: 0.05,
-        fontFamily: '../assets/Roboto-msdf.json',
-        fontTexture: '../assets/Roboto-msdf.png'
+        fontFamily: './assets/Roboto-msdf.json',
+        fontTexture: './assets/Roboto-msdf.png',
+        borderWidth: 0.5
        });
-    UIcontainer.position.set(camera.position.x, camera.position.y, -1.8);
+    UIcontainer.position.set(camera.position.x, camera.position.y, -0.4);
 
+    
     UIcontainer.add( UIText );
 
-    
+    let setupControllersP;
     
 
-    let setupControllersP;
-    let getDrawingsP = new Promise((resolve) => {
-        getDrawings(resolve);
-    });
+
+ 
     if(!viewer){
         renderer.xr.enabled = true;
         document.body.appendChild( VRButton.createButton( renderer ) );
-        setupControllersP = new Promise((resolve) => {
-            setupControllers(resolve);
-        });
+       
         scene.add(dotL);
         scene.add(dotR);
         scene.add( UIcontainer );
       //  scene.add( UIBlockRight );
+        setupControllersP = new Promise((resolve) => {
+        setupControllers(resolve);
+    });
+
+
     }
     else{
         ////////////////BLOOM, GUI, TEXT
@@ -160,21 +155,25 @@ function init(){
             gui.add( params, 'bloomRadius', 0.0, 1.0 ).step( 0.01 ).onChange( function ( value ) {
                         bloomPass.radius = Number( value );
                     } );
+            gui.add( params, 'autoRotate').onChange( function () {
+                        if (controls.autoRotate)
+                       { controls.autoRotate=false}else{controls.autoRotate=true}
+                    })
     
-
-           
-
-        setupControllersP = new Promise((resolve) => {
-            resolve();
-        });
+   
         controls = new OrbitControls( camera, renderer.domElement );
-        
-        controls.minDistance = 2;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 0.1;
+        controls.minDistance = 0;
         controls.maxDistance = 10;
-
+        scene.add( UIcontainer );
         
     }
    
+
+    let getDrawingsP = new Promise((resolve) => {
+        getDrawings(resolve);
+    });
     Promise.all([setupControllersP, getDrawingsP]).then(data =>{
         animate();
         if(viewer){
@@ -194,7 +193,6 @@ function render() {
         updateMeshes();
         renderer.render( scene, camera );
     }else{ 
-        scene.rotation.y += 0.001;
         composer.render( scene, camera ); 
     }
    
@@ -376,10 +374,8 @@ function loadDrawing(direction){
             activeDrawing = drawings.length - 1;
         }  
     }
-    UIText.set({content:
-        "R \n A = volgende\n B = Vorige \n\n L \n Y = Opslaan \n X = Nieuw \n Tekening:" +
-        activeDrawing.toString()
-    })
+    
+
 
     let request = new XMLHttpRequest();
     const formData = new FormData();
@@ -389,6 +385,7 @@ function loadDrawing(direction){
     request.onload = function(){
         clearScene();
         let data = JSON.parse(this.responseText);
+        if (data.title ){ drawingTitle = data.title}else{drawingTitle = activeDrawing.toString()}
         if(data.editable == 1){
             editRights = true;
         }
@@ -398,6 +395,9 @@ function loadDrawing(direction){
         drawDrawing(JSON.parse(data['shapes']));
         interactionOccuredL = false;
         interactionOccuredR = false;
+        UIText.set({content:
+            drawingTitle
+        })
     }
 }
 
@@ -721,17 +721,17 @@ document.addEventListener("keydown", function(event) {
     if(event.key == 's'){
         saveDrawing();
     }
-    if(event.key == 'o'){
+    if(event.key == 'ArrowLeft'){
         loadDrawing(true);
     }
-    if(event.key == 'p'){
+    if(event.key == 'ArrowRight'){
         loadDrawing(false);
     }
     if(event.key == 'c'){
         newFile();
     }
     if(event.key == 'e'){ 
-        // exportGLTF(scene);
+         exportGLTF(scene);
     }
 })
 
