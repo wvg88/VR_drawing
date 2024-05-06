@@ -52,7 +52,7 @@ let drawingTitle;
 let savingInProgress = false;
 let interactionOccuredL = false;
 let interactionOccuredR = false;
-let UIText = new Text({content: "Druk A voor de volgende sculptuur en \n B voor de vorige(maar niet te snel,\n deze moet even laden)\nDruk op"});
+let UIText = new Text({content: "Druk A voor de volgende sculptuur en \n B voor de vorige\n \nDruk twee keer X om een nieuwe tekening te maken \n Druk Y om op te slaan"});
 // let UITextRight = new Text({content: "A = Volgende\n B = Vorige",fontSize:0.03});
 let first_press = false;
 
